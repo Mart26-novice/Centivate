@@ -11,7 +11,12 @@ import {
   AlertTriangle,
   UserCheck,
   GraduationCap,
+  LogIn,
+  LogOut,
+  User,
+  ShieldCheck,
 } from 'lucide-react';
+import { UserSession } from '../types';
 
 interface HeaderProps {
   activeTab: 'student' | 'admin' | 'analytics' | 'research';
@@ -20,6 +25,9 @@ interface HeaderProps {
   onOpenResearchInfo: () => void;
   pendingCount: number;
   urgentCount: number;
+  currentUser: UserSession | null;
+  onOpenLogin: (role?: 'student' | 'admin') => void;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +37,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenResearchInfo,
   pendingCount,
   urgentCount,
+  currentUser,
+  onOpenLogin,
+  onLogout,
 }) => {
   const [searchCode, setSearchCode] = useState('');
 
@@ -162,6 +173,48 @@ export const Header: React.FC<HeaderProps> = ({
             <BarChart3 className="w-4 h-4" />
             <span>Analytics & Research</span>
           </button>
+        </div>
+
+        {/* User Session Auth Badge / Login Action */}
+        <div className="flex items-center gap-2">
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-blue-950/90 border border-amber-400/50 pl-3 pr-1.5 py-1.5 rounded-xl text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-400 text-blue-950 font-black flex items-center justify-center text-xs shadow">
+                  {currentUser.role === 'admin' ? (
+                    <ShieldCheck className="w-4 h-4 text-blue-950" />
+                  ) : (
+                    <GraduationCap className="w-4 h-4 text-blue-950" />
+                  )}
+                </div>
+                <div className="hidden lg:block text-left">
+                  <p className="font-bold text-white text-[11px] leading-tight truncate max-w-[120px]">
+                    {currentUser.fullName}
+                  </p>
+                  <p className="text-[10px] text-amber-300 capitalize font-medium">
+                    {currentUser.role} Account
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onLogout}
+                className="p-1.5 hover:bg-red-500/20 text-red-300 hover:text-red-200 rounded-lg transition-colors ml-1"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => onOpenLogin('student')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs rounded-xl shadow transition-transform active:scale-95 border-b-2 border-amber-600"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Log In</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

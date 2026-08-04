@@ -19,7 +19,7 @@ import {
   UserCheck,
   FileText,
 } from 'lucide-react';
-import { Complaint, ComplaintCategory, BuildingLocation, ComplaintPriority } from '../types';
+import { Complaint, ComplaintCategory, BuildingLocation, ComplaintPriority, UserSession } from '../types';
 import { PhotoUploadModal } from './PhotoUploadModal';
 
 interface StudentPortalProps {
@@ -27,6 +27,8 @@ interface StudentPortalProps {
   onCreateComplaint: (data: any) => Promise<Complaint>;
   onSelectComplaint: (complaint: Complaint) => void;
   onOpenTracker: (code?: string) => void;
+  currentUser?: UserSession | null;
+  onOpenLogin?: () => void;
 }
 
 const CATEGORY_OPTIONS: { name: ComplaintCategory; icon: string; desc: string }[] = [
@@ -63,6 +65,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onCreateComplaint,
   onSelectComplaint,
   onOpenTracker,
+  currentUser,
+  onOpenLogin,
 }) => {
   const [activeTab, setActiveTab] = useState<'form' | 'list'>('form');
 
@@ -74,10 +78,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const [locationRoom, setLocationRoom] = useState('');
   const [priority, setPriority] = useState<ComplaintPriority>('Medium');
   const [photoUrl, setPhotoUrl] = useState('');
-  const [studentName, setStudentName] = useState('');
-  const [studentStrand, setStudentStrand] = useState('STEM 12-A');
+  const [studentName, setStudentName] = useState(currentUser?.fullName || 'Juan De La Cruz');
+  const [studentStrand, setStudentStrand] = useState(currentUser?.strandOrDepartment || 'STEM 12-A');
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [contactEmail, setContactEmail] = useState('');
+  const [contactEmail, setContactEmail] = useState(currentUser?.email || 'student.shs@cpu.edu.ph');
 
   // UI state
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -512,7 +516,37 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </div>
 
             {!isAnonymous && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fadeIn">
+              <div className="space-y-3">
+                {currentUser ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <span className="font-bold text-slate-800">
+                        Logged in as: <span className="text-blue-900">{currentUser.fullName}</span> ({currentUser.email})
+                      </span>
+                    </div>
+                    <span className="bg-amber-400 text-blue-950 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                      {currentUser.role} Credentials
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between text-xs">
+                    <span className="text-slate-700 font-medium">
+                      Reporting as guest. Want to log in with your temporary student or admin email?
+                    </span>
+                    {onOpenLogin && (
+                      <button
+                        type="button"
+                        onClick={onOpenLogin}
+                        className="px-3 py-1 bg-blue-900 text-white font-bold text-[11px] rounded-lg hover:bg-blue-800"
+                      >
+                        Sign In Now
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fadeIn">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                     Student Full Name
@@ -556,6 +590,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   />
                 </div>
               </div>
+            </div>
             )}
           </div>
 

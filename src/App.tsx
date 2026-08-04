@@ -11,14 +11,21 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { PublicTracker } from './components/PublicTracker';
 import { ResearchInfoModal } from './components/ResearchInfoModal';
 import { ComplaintDetailsModal } from './components/ComplaintDetailsModal';
-import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff } from './types';
+import { LoginModal } from './components/LoginModal';
+import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole } from './types';
 import { INITIAL_COMPLAINTS, INITIAL_STAFF } from './data/initialData';
+import { PRESET_USERS } from './data/authData';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'student' | 'admin' | 'analytics' | 'research'>('student');
   const [complaints, setComplaints] = useState<Complaint[]>(INITIAL_COMPLAINTS);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [staffList, setStaffList] = useState<MaintenanceStaff[]>(INITIAL_STAFF);
+
+  // Authentication state
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(PRESET_USERS.student);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+  const [loginModalInitialRole, setLoginModalInitialRole] = useState<UserRole>('student');
 
   // Modals
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
@@ -157,6 +164,30 @@ export default function App() {
     setIsTrackerOpen(true);
   };
 
+  const handleOpenLogin = (role?: UserRole) => {
+    setLoginModalInitialRole(role || 'student');
+    setIsLoginModalOpen(true);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
+
+  const handleTabChange = (tab: 'student' | 'admin' | 'analytics' | 'research') => {
+    if (tab === 'research') {
+      setIsResearchModalOpen(true);
+      return;
+    }
+
+    if (tab === 'admin' && currentUser?.role !== 'admin') {
+      // Prompt admin login
+      handleOpenLogin('admin');
+      return;
+    }
+
+    setActiveTab(tab);
+  };
+
   const pendingCount = complaints.filter((c) => !c.isArchived && (c.status === 'Filed' || c.status === 'Pending')).length;
   const urgentCount = complaints.filter((c) => !c.isArchived && (c.priority === 'Urgent / Hazard' || c.priority === 'High')).length;
 
@@ -165,17 +196,14 @@ export default function App() {
       {/* Global Header */}
       <Header
         activeTab={activeTab}
-        setActiveTab={(tab) => {
-          if (tab === 'research') {
-            setIsResearchModalOpen(true);
-          } else {
-            setActiveTab(tab);
-          }
-        }}
+        setActiveTab={handleTabChange}
         onOpenTracker={handleOpenTracker}
         onOpenResearchInfo={() => setIsResearchModalOpen(true)}
         pendingCount={pendingCount}
         urgentCount={urgentCount}
+        currentUser={currentUser}
+        onOpenLogin={handleOpenLogin}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -186,6 +214,8 @@ export default function App() {
             onCreateComplaint={handleCreateComplaint}
             onSelectComplaint={(c) => setSelectedComplaint(c)}
             onOpenTracker={handleOpenTracker}
+            currentUser={currentUser}
+            onOpenLogin={() => handleOpenLogin('student')}
           />
         )}
 
@@ -254,6 +284,21 @@ export default function App() {
         avgSatisfactionScore={stats?.avgSatisfactionScore || 4.7}
         surveyCount={stats?.surveyCount || 3}
         onSurveySubmitted={fetchStats}
+      />
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        initialRole={loginModalInitialRole}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          if (user.role === 'admin') {
+            setActiveTab('admin');
+          } else {
+            setActiveTab('student');
+          }
+        }}
+        onOpenTracker={() => handleOpenTracker()}
       />
     </div>
   );

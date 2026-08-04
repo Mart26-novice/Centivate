@@ -1,3 +1,14 @@
+export type UserRole = 'student' | 'admin';
+
+export interface UserSession {
+  id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  fullName: string;
+  strandOrDepartment?: string;
+}
+
 export type ComplaintStatus = 'Filed' | 'Pending' | 'In Progress' | 'Resolved' | 'Cancelled';
 
 export type ComplaintPriority = 'Low' | 'Medium' | 'High' | 'Urgent / Hazard';
