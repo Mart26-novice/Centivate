@@ -1,0 +1,6 @@
+{
+  "name": "Centivate - Complaint Reporting & Management System",
+  "description": "Full-stack mobile and web facility complaint reporting and maintenance management system designed for SHS research and campus administration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
