@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { UserCheck, ShieldAlert } from 'lucide-react';
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { StudentPortal } from './components/StudentPortal';
@@ -172,11 +173,17 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setActiveTab('home');
   };
 
   const handleTabChange = (tab: 'home' | 'student' | 'admin' | 'analytics' | 'research') => {
     if (tab === 'research') {
       setIsResearchModalOpen(true);
+      return;
+    }
+
+    if (tab === 'student' && !currentUser) {
+      handleOpenLogin('student');
       return;
     }
 
@@ -222,14 +229,42 @@ export default function App() {
         )}
 
         {activeTab === 'student' && (
-          <StudentPortal
-            complaints={complaints.filter((c) => !c.isArchived)}
-            onCreateComplaint={handleCreateComplaint}
-            onSelectComplaint={(c) => setSelectedComplaint(c)}
-            onOpenTracker={handleOpenTracker}
-            currentUser={currentUser}
-            onOpenLogin={() => handleOpenLogin('student')}
-          />
+          currentUser ? (
+            <StudentPortal
+              complaints={complaints.filter((c) => !c.isArchived)}
+              onCreateComplaint={handleCreateComplaint}
+              onSelectComplaint={(c) => setSelectedComplaint(c)}
+              onOpenTracker={handleOpenTracker}
+              currentUser={currentUser}
+              onOpenLogin={() => handleOpenLogin('student')}
+            />
+          ) : (
+            <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+              <div className="w-20 h-20 bg-amber-100 text-blue-950 rounded-3xl flex items-center justify-center mx-auto border-2 border-amber-300 shadow-xl">
+                <UserCheck className="w-10 h-10 text-blue-950" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black text-slate-800 tracking-tight">Student Sign-In Required</h2>
+                <p className="text-sm text-slate-600 max-w-md mx-auto">
+                  Please log in with your CPU Senior High School account to file maintenance reports and track your submitted tickets.
+                </p>
+              </div>
+              <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+                <button
+                  onClick={() => handleOpenLogin('student')}
+                  className="px-8 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 transform active:scale-95 transition-all"
+                >
+                  Sign In as Student
+                </button>
+                <button
+                  onClick={() => setActiveTab('home')}
+                  className="px-6 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-2xl transition-colors"
+                >
+                  Return to Home Page
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {activeTab === 'admin' && (

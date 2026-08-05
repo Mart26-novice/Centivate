@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BarChart3,
   PieChart,
@@ -14,6 +14,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { SystemStats, Complaint } from '../types';
+import { PrintableReportModal } from './PrintableReportModal';
 
 interface AnalyticsViewProps {
   stats: SystemStats | null;
@@ -26,6 +27,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   complaints,
   onOpenResearchInfo,
 }) => {
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
   const categoryCounts = stats?.categoryBreakdown || {};
   const buildingCounts = stats?.buildingBreakdown || {};
 
@@ -54,7 +57,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
   };
 
   const handlePrintReport = () => {
-    window.print();
+    setIsPrintModalOpen(true);
   };
 
   return (
@@ -232,6 +235,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           </div>
         </div>
       </div>
+
+      <PrintableReportModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        stats={stats}
+        complaints={complaints}
+      />
     </div>
   );
 };
