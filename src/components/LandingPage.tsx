@@ -18,7 +18,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { UserSession } from '../types';
-const campusBg = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80';
+import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
 
 interface LandingPageProps {
   onNavigate: (tab: 'student' | 'admin' | 'analytics' | 'research') => void;

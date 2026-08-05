@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { UserRole, UserSession } from '../types';
 import { PRESET_USERS } from '../data/authData';
-const campusBg = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80';
+import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
 
 interface LoginModalProps {
   isOpen: boolean;
