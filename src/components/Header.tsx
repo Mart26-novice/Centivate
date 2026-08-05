@@ -15,12 +15,13 @@ import {
   LogOut,
   User,
   ShieldCheck,
+  Home,
 } from 'lucide-react';
 import { UserSession } from '../types';
 
 interface HeaderProps {
-  activeTab: 'student' | 'admin' | 'analytics' | 'research';
-  setActiveTab: (tab: 'student' | 'admin' | 'analytics' | 'research') => void;
+  activeTab: 'home' | 'student' | 'admin' | 'analytics' | 'research';
+  setActiveTab: (tab: 'home' | 'student' | 'admin' | 'analytics' | 'research') => void;
   onOpenTracker: (code?: string) => void;
   onOpenResearchInfo: () => void;
   pendingCount: number;
@@ -81,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Brand & Logo */}
         <div className="flex items-center gap-3.5">
-          <div className="relative group cursor-pointer" onClick={() => setActiveTab('student')}>
+          <div className="relative group cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="w-12 h-12 rounded-xl bg-amber-400 text-blue-950 flex items-center justify-center font-black text-2xl shadow-md border-2 border-amber-300 transform group-hover:scale-105 transition-transform">
               <ShieldAlert className="w-7 h-7 text-blue-950" />
             </div>
@@ -90,7 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className="cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-black tracking-tight text-white font-sans flex items-center gap-2">
                 CENTIVATE
@@ -128,6 +129,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Navigation Tabs */}
         <div className="flex items-center bg-blue-950/90 p-1 rounded-xl border border-blue-800/80 shadow-inner overflow-x-auto max-w-full">
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+              activeTab === 'home'
+                ? 'bg-amber-400 text-blue-950 shadow'
+                : 'text-blue-100 hover:text-white hover:bg-blue-900/60'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span>CPU Campus Home</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('student')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${

@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
+import { LandingPage } from './components/LandingPage';
 import { StudentPortal } from './components/StudentPortal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AnalyticsView } from './components/AnalyticsView';
@@ -17,7 +18,7 @@ import { INITIAL_COMPLAINTS, INITIAL_STAFF } from './data/initialData';
 import { PRESET_USERS } from './data/authData';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'student' | 'admin' | 'analytics' | 'research'>('student');
+  const [activeTab, setActiveTab] = useState<'home' | 'student' | 'admin' | 'analytics' | 'research'>('home');
   const [complaints, setComplaints] = useState<Complaint[]>(INITIAL_COMPLAINTS);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [staffList, setStaffList] = useState<MaintenanceStaff[]>(INITIAL_STAFF);
@@ -173,7 +174,7 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  const handleTabChange = (tab: 'student' | 'admin' | 'analytics' | 'research') => {
+  const handleTabChange = (tab: 'home' | 'student' | 'admin' | 'analytics' | 'research') => {
     if (tab === 'research') {
       setIsResearchModalOpen(true);
       return;
@@ -190,6 +191,7 @@ export default function App() {
 
   const pendingCount = complaints.filter((c) => !c.isArchived && (c.status === 'Filed' || c.status === 'Pending')).length;
   const urgentCount = complaints.filter((c) => !c.isArchived && (c.priority === 'Urgent / Hazard' || c.priority === 'High')).length;
+  const resolvedCount = complaints.filter((c) => c.status === 'Resolved').length;
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans selection:bg-amber-300 selection:text-blue-950">
@@ -208,6 +210,17 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
+        {activeTab === 'home' && (
+          <LandingPage
+            onNavigate={(tab) => handleTabChange(tab)}
+            onOpenTracker={() => handleOpenTracker()}
+            onOpenLogin={(role) => handleOpenLogin(role)}
+            currentUser={currentUser}
+            totalComplaintsCount={complaints.length}
+            resolvedCount={resolvedCount}
+          />
+        )}
+
         {activeTab === 'student' && (
           <StudentPortal
             complaints={complaints.filter((c) => !c.isArchived)}
