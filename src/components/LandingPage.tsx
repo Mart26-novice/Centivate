@@ -46,11 +46,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <img
             src={campusBg}
             alt="Central Philippine University Aerial Campus View"
-            className="w-full h-full object-cover opacity-35 mix-blend-overlay scale-105 transition-transform duration-1000 hover:scale-100"
+            className="w-full h-full object-cover opacity-70 scale-105 transition-transform duration-1000 hover:scale-100"
             referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/80 to-blue-900/50" />
-          <div className="absolute inset-0 bg-radial-at-c from-transparent via-blue-950/40 to-blue-950" />
+          <div className="absolute inset-0 bg-gradient-to-t from-blue-950/90 via-blue-900/60 to-blue-950/50 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-blue-950/30" />
         </div>
 
         {/* Hero Content */}
@@ -64,7 +64,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Title & Tagline */}
           <div className="space-y-3 max-w-4xl">
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
-              CENTIVATE <span className="text-amber-400 font-extrabold">SHS</span> Maintenance Portal
+              CENTIVATE <span className="text-amber-400 font-extrabold"></span> Maintenance Portal
             </h1>
             <p className="text-base sm:text-xl text-blue-100 font-medium leading-relaxed max-w-3xl mx-auto">
               Empowering CPU Centralians with a fast, transparent, and accountable facility complaint reporting system. Ensuring clean classrooms, working equipment, and safe learning environments.
