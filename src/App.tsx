@@ -553,6 +553,7 @@ export default function App() {
         isOpen={isTrackerOpen}
         onClose={() => setIsTrackerOpen(false)}
         initialCode={trackerCode}
+        complaints={complaints}
       />
 
       <ResearchInfoModal

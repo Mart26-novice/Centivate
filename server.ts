@@ -99,6 +99,7 @@ async function startServer() {
 
     // Return public-safe complaint view
     res.json({
+      id: found.id,
       trackingCode: found.trackingCode,
       title: found.title,
       description: found.description,

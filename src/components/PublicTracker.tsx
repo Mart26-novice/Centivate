@@ -20,6 +20,7 @@ interface PublicTrackerProps {
   isOpen: boolean;
   onClose: () => void;
   initialCode?: string;
+  complaints?: Complaint[];
 }
 
 const STATUS_STEPS: { status: ComplaintStatus; label: string; icon: any }[] = [
@@ -33,6 +34,7 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
   isOpen,
   onClose,
   initialCode = '',
+  complaints = [],
 }) => {
   const [code, setCode] = useState(initialCode);
   const [complaint, setComplaint] = useState<Complaint | null>(null);
@@ -40,20 +42,64 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const handleFetchTracker = async (searchCode: string) => {
-    if (!searchCode.trim()) return;
+    const trimmed = searchCode.trim().toUpperCase();
+    if (!trimmed) return;
     setLoading(true);
     setError(null);
+
+    // 1. Check in client-side complaints list (from App state / Firestore subscription)
+    const localMatch = complaints.find(
+      (c) =>
+        c.trackingCode.toUpperCase() === trimmed ||
+        c.id.toUpperCase() === trimmed ||
+        c.trackingCode.toUpperCase().includes(trimmed)
+    );
+
+    if (localMatch) {
+      setComplaint(localMatch);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Query backend API
     try {
-      const res = await fetch(`/api/complaints/track/${encodeURIComponent(searchCode.trim())}`);
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'No record found.');
+      const res = await fetch(`/api/complaints/track/${encodeURIComponent(trimmed)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setComplaint(data);
+        setLoading(false);
+        return;
       }
-      const data = await res.json();
-      setComplaint(data);
-    } catch (err: any) {
+    } catch (err) {
+      console.warn('Backend API search failed, querying Firestore directly:', err);
+    }
+
+    // 3. Fallback: Query Firestore database directly
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebase');
+      const snap = await getDocs(collection(db, 'complaints'));
+      let fsMatch: Complaint | null = null;
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as Complaint;
+        if (
+          data.trackingCode &&
+          (data.trackingCode.toUpperCase() === trimmed || docSnap.id.toUpperCase() === trimmed)
+        ) {
+          fsMatch = { id: docSnap.id, ...data };
+        }
+      });
+
+      if (fsMatch) {
+        setComplaint(fsMatch);
+      } else {
+        setComplaint(null);
+        setError(`No complaint found with tracking code: ${trimmed}`);
+      }
+    } catch (fsErr: any) {
+      console.error('Firestore tracker query error:', fsErr);
       setComplaint(null);
-      setError(err.message || 'Tracking code not found.');
+      setError('Tracking code not found in system.');
     } finally {
       setLoading(false);
     }
@@ -66,6 +112,22 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
     }
   }, [initialCode]);
 
+  // Real-time synchronization: automatically update the displayed complaint whenever live complaints update
+  useEffect(() => {
+    if (complaint && complaints && complaints.length > 0) {
+      const liveMatch = complaints.find(
+        (c) =>
+          c.id === complaint.id ||
+          (c.trackingCode &&
+            complaint.trackingCode &&
+            c.trackingCode.trim().toUpperCase() === complaint.trackingCode.trim().toUpperCase())
+      );
+      if (liveMatch && JSON.stringify(liveMatch) !== JSON.stringify(complaint)) {
+        setComplaint(liveMatch);
+      }
+    }
+  }, [complaints]);
+
   if (!isOpen) return null;
 
   const handleSearch = (e: React.FormEvent) => {
@@ -73,21 +135,14 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
     handleFetchTracker(code);
   };
 
-  const getStepIndex = (currentStatus: ComplaintStatus): number => {
-    switch (currentStatus) {
-      case 'Filed':
-        return 0;
-      case 'Pending':
-        return 1;
-      case 'In Progress':
-        return 2;
-      case 'Resolved':
-        return 3;
-      case 'Cancelled':
-        return -1;
-      default:
-        return 0;
-    }
+  const getStepIndex = (currentStatus: ComplaintStatus | string): number => {
+    const s = (currentStatus || '').toLowerCase().trim();
+    if (s === 'filed') return 0;
+    if (s === 'pending') return 1;
+    if (s === 'in progress' || s === 'inprogress' || s === 'ongoing') return 2;
+    if (s === 'resolved' || s === 'completed' || s === 'done' || s === 'fixed') return 3;
+    if (s === 'cancelled' || s === 'canceled') return -1;
+    return 0;
   };
 
   return (
@@ -184,16 +239,18 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
                     Progress Workflow
                   </label>
-                  <div className="relative flex items-center justify-between max-w-md mx-auto">
+                  <div className="relative flex items-center justify-between max-w-md mx-auto px-4">
                     {/* Connecting Line */}
-                    <div className="absolute top-1/2 left-4 right-4 h-1 bg-slate-200 -translate-y-1/2 -z-0" />
+                    <div className="absolute top-1/2 left-8 right-8 h-1 bg-slate-200 -translate-y-1/2 z-0" />
                     <div
-                      className="absolute top-1/2 left-4 h-1 bg-amber-400 -translate-y-1/2 -z-0 transition-all duration-500"
+                      className={`absolute top-1/2 left-8 h-1 -translate-y-1/2 z-0 transition-all duration-500 ${
+                        getStepIndex(complaint.status) === 3 ? 'bg-emerald-500' : 'bg-amber-400'
+                      }`}
                       style={{
-                        width: `${Math.max(
+                        width: `calc((100% - 64px) * ${Math.max(
                           0,
-                          (getStepIndex(complaint.status) / (STATUS_STEPS.length - 1)) * 100
-                        )}%`,
+                          getStepIndex(complaint.status) / (STATUS_STEPS.length - 1)
+                        )})`,
                       }}
                     />
 
@@ -201,13 +258,16 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                       const currentIdx = getStepIndex(complaint.status);
                       const isDone = idx <= currentIdx;
                       const isCurrent = idx === currentIdx;
+                      const isResolved = currentIdx === 3;
                       const StepIcon = step.icon;
 
                       return (
                         <div key={idx} className="relative z-10 flex flex-col items-center">
                           <div
                             className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all shadow ${
-                              isCurrent
+                              isResolved && idx === 3
+                                ? 'bg-emerald-500 text-white ring-4 ring-emerald-200 scale-110'
+                                : isCurrent
                                 ? 'bg-amber-400 text-blue-950 ring-4 ring-amber-200 scale-110'
                                 : isDone
                                 ? 'bg-blue-900 text-white'
@@ -218,7 +278,9 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                           </div>
                           <span
                             className={`text-[10px] font-bold mt-1 text-center max-w-[70px] ${
-                              isCurrent
+                              isResolved && idx === 3
+                                ? 'text-emerald-700 font-black'
+                                : isCurrent
                                 ? 'text-blue-950 font-black'
                                 : isDone
                                 ? 'text-blue-800'
