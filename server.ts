@@ -3,8 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
-import { INITIAL_COMPLAINTS, INITIAL_SURVEYS } from './src/data/initialData.js';
-import { Complaint, ComplaintPriority, ComplaintCategory, ComplaintStatus, SurveyResponse, StatusLog, SystemStats } from './src/types.js';
+import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from './src/data/initialData.js';
+import { Complaint, ComplaintPriority, ComplaintCategory, ComplaintStatus, SurveyResponse, StatusLog, SystemStats, MaintenanceStaff } from './src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 // In-memory data store with initial seed
 let complaintsStore: Complaint[] = JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
 let surveyStore: SurveyResponse[] = JSON.parse(JSON.stringify(INITIAL_SURVEYS));
+let staffStore: MaintenanceStaff[] = JSON.parse(JSON.stringify(INITIAL_STAFF));
 
 // Lazy Gemini AI Client helper
 function getGeminiClient(): GoogleGenAI | null {
@@ -452,6 +453,107 @@ Return a JSON object with:
 
     surveyStore.unshift(newSurvey);
     res.status(201).json(newSurvey);
+  });
+
+  // 10. Staff Management Endpoints
+  // GET /api/staff
+  app.get('/api/staff', (_req, res) => {
+    // Recalculate active workload dynamically based on open complaints
+    const activeStaffList = staffStore.map((st) => {
+      const activeCount = complaintsStore.filter(
+        (c) =>
+          !c.isArchived &&
+          c.status !== 'Resolved' &&
+          c.status !== 'Cancelled' &&
+          c.assignedStaff &&
+          c.assignedStaff.trim().toLowerCase() === st.name.trim().toLowerCase()
+      ).length;
+      return {
+        ...st,
+        activeWorkload: activeCount,
+      };
+    });
+    res.json(activeStaffList);
+  });
+
+  // POST /api/staff - Add new staff
+  app.post('/api/staff', (req, res) => {
+    const { name, role, specialty, phone } = req.body;
+    if (!name || !role || !specialty) {
+      return res.status(400).json({ error: 'Name, role, and specialty are required.' });
+    }
+
+    const newStaff: MaintenanceStaff = {
+      id: `ST-${Date.now().toString().slice(-4)}`,
+      name: name.trim(),
+      role: role.trim(),
+      specialty: specialty as ComplaintCategory,
+      phone: phone ? phone.trim() : '0917-000-0000',
+      activeWorkload: 0,
+    };
+
+    staffStore.push(newStaff);
+    res.status(201).json(newStaff);
+  });
+
+  // PATCH /api/staff/:id - Edit staff or assign new role
+  app.patch('/api/staff/:id', (req, res) => {
+    const { id } = req.params;
+    const { name, role, specialty, phone } = req.body;
+
+    const index = staffStore.findIndex((s) => s.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Staff member not found.' });
+    }
+
+    const currentName = staffStore[index].name;
+    const updatedName = name ? name.trim() : currentName;
+
+    // If name changed, update any active complaint assignments matching old name
+    if (name && currentName !== updatedName) {
+      complaintsStore.forEach((c) => {
+        if (c.assignedStaff && c.assignedStaff.trim().toLowerCase() === currentName.toLowerCase()) {
+          c.assignedStaff = updatedName;
+        }
+      });
+    }
+
+    staffStore[index] = {
+      ...staffStore[index],
+      name: updatedName,
+      role: role ? role.trim() : staffStore[index].role,
+      specialty: specialty ? (specialty as ComplaintCategory) : staffStore[index].specialty,
+      phone: phone !== undefined ? phone.trim() : staffStore[index].phone,
+    };
+
+    res.json(staffStore[index]);
+  });
+
+  // DELETE /api/staff/:id - Remove staff member
+  app.delete('/api/staff/:id', (req, res) => {
+    const { id } = req.params;
+    const index = staffStore.findIndex((s) => s.id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ error: 'Staff member not found.' });
+    }
+
+    const removed = staffStore[index];
+    staffStore.splice(index, 1);
+
+    // Optionally clear assignment on un-resolved complaints for this staff
+    complaintsStore.forEach((c) => {
+      if (
+        !c.isArchived &&
+        c.status !== 'Resolved' &&
+        c.assignedStaff &&
+        c.assignedStaff.trim().toLowerCase() === removed.name.trim().toLowerCase()
+      ) {
+        c.assignedStaff = '';
+      }
+    });
+
+    res.json({ message: 'Staff member removed successfully.', id });
   });
 
   // --- VITE MIDDLEWARE / PRODUCTION STATIC ---

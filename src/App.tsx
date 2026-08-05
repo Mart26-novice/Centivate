@@ -60,9 +60,22 @@ export default function App() {
     }
   };
 
+  const fetchStaff = async () => {
+    try {
+      const res = await fetch('/api/staff');
+      if (res.ok) {
+        const data = await res.json();
+        setStaffList(data);
+      }
+    } catch (err) {
+      console.warn('Staff fetch failed:', err);
+    }
+  };
+
   useEffect(() => {
     fetchComplaints();
     fetchStats();
+    fetchStaff();
   }, []);
 
   const handleCreateComplaint = async (newReportData: any): Promise<Complaint> => {
@@ -158,6 +171,62 @@ export default function App() {
       fetchStats();
     } catch (err) {
       console.error('Archive error:', err);
+    }
+  };
+
+  const handleCreateStaff = async (staffData: Omit<MaintenanceStaff, 'id' | 'activeWorkload'>) => {
+    try {
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffData),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setStaffList((prev) => [...prev, created]);
+        fetchStaff();
+      }
+    } catch (err) {
+      console.error('Failed to create staff:', err);
+      const fallback: MaintenanceStaff = {
+        id: `ST-${Date.now().toString().slice(-4)}`,
+        ...staffData,
+        activeWorkload: 0,
+      };
+      setStaffList((prev) => [...prev, fallback]);
+    }
+  };
+
+  const handleUpdateStaff = async (id: string, updates: Partial<MaintenanceStaff>) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setStaffList((prev) => prev.map((s) => (s.id === id ? updated : s)));
+        fetchStaff();
+        fetchComplaints();
+      }
+    } catch (err) {
+      console.error('Failed to update staff:', err);
+      setStaffList((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setStaffList((prev) => prev.filter((s) => s.id !== id));
+        fetchStaff();
+        fetchComplaints();
+      }
+    } catch (err) {
+      console.error('Failed to delete staff:', err);
+      setStaffList((prev) => prev.filter((s) => s.id !== id));
     }
   };
 
@@ -368,9 +437,13 @@ export default function App() {
               onSelectComplaint={(c) => setSelectedComplaint(c)}
               onUpdateComplaintStatus={handleUpdateComplaintStatus}
               onArchiveComplaint={handleArchiveComplaint}
+              onAddStaff={handleCreateStaff}
+              onUpdateStaff={handleUpdateStaff}
+              onDeleteStaff={handleDeleteStaff}
               onRefreshData={() => {
                 fetchComplaints();
                 fetchStats();
+                fetchStaff();
               }}
             />
           )
