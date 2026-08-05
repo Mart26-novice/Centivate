@@ -58,7 +58,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400 text-blue-950 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg transform hover:scale-105 transition-transform">
             <GraduationCap className="w-4 h-4 text-blue-950" />
-            <span>Central Philippine University • Senior High School</span>
+            <span>Central Philippine University </span>
           </div>
 
           {/* Title & Tagline */}

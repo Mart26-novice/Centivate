@@ -10,6 +10,7 @@ import {
   Award,
   Layers,
   FileCheck,
+  Layout,
 } from 'lucide-react';
 
 interface ResearchInfoModalProps {

@@ -16,6 +16,7 @@ import {
   User,
   ShieldCheck,
   Home,
+  Layout,
 } from 'lucide-react';
 import { UserSession } from '../types';
 
