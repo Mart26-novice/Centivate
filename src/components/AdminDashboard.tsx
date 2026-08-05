@@ -474,7 +474,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {activeTab === 'table' ? (
+      {activeTab === 'table' && (
         /* MAIN WORK ORDERS TABLE CONTAINER */
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden space-y-4 p-6">
           {/* Filter Bar Controls */}
@@ -656,8 +656,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </table>
           </div>
         </div>
-      ) : (
-        /* TECHNICIANS ROSTER & STAFF MANAGEMENT VIEW */
+      )}
+
+      {/* TECHNICIANS ROSTER & STAFF MANAGEMENT VIEW */}
+      {activeTab === 'staff' && (
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 space-y-6">
           <div className="border-b border-slate-200 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
