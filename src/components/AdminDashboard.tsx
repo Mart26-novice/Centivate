@@ -30,18 +30,21 @@ import {
   Check,
   Shield,
 } from 'lucide-react';
-import { Complaint, ComplaintStatus, ComplaintCategory, BuildingLocation, SystemStats, MaintenanceStaff } from '../types';
+import { Complaint, ComplaintStatus, ComplaintCategory, BuildingLocation, SystemStats, MaintenanceStaff, OfficialStudent } from '../types';
 
 interface AdminDashboardProps {
   complaints: Complaint[];
   stats: SystemStats | null;
   staffList: MaintenanceStaff[];
+  studentList?: OfficialStudent[];
   onSelectComplaint: (complaint: Complaint) => void;
   onUpdateComplaintStatus: (id: string, status: ComplaintStatus, note?: string) => Promise<void>;
   onArchiveComplaint: (id: string) => Promise<void>;
   onAddStaff?: (staffData: Omit<MaintenanceStaff, 'id' | 'activeWorkload'>) => Promise<void> | void;
   onUpdateStaff?: (id: string, updates: Partial<MaintenanceStaff>) => Promise<void> | void;
   onDeleteStaff?: (id: string) => Promise<void> | void;
+  onSaveStudent?: (student: OfficialStudent) => Promise<void> | void;
+  onDeleteStudent?: (id: string) => Promise<void> | void;
   onRefreshData: () => void;
 }
 
@@ -73,12 +76,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   complaints,
   stats,
   staffList,
+  studentList = [],
   onSelectComplaint,
   onUpdateComplaintStatus,
   onArchiveComplaint,
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
+  onSaveStudent,
+  onDeleteStudent,
   onRefreshData,
 }) => {
   // Filter States
@@ -87,12 +93,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedBuilding, setSelectedBuilding] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showArchived, setShowArchived] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'table' | 'staff'>('table');
+  const [activeTab, setActiveTab] = useState<'table' | 'staff' | 'students'>('table');
 
   // Staff Management Modal State
   const [isStaffModalOpen, setIsStaffModalOpen] = useState<boolean>(false);
   const [editingStaff, setEditingStaff] = useState<MaintenanceStaff | null>(null);
   const [staffSearchQuery, setStaffSearchQuery] = useState<string>('');
+
+  // Student Roster State
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState<boolean>(false);
+  const [editingStudent, setEditingStudent] = useState<OfficialStudent | null>(null);
+  const [studIdNum, setStudIdNum] = useState<string>('');
+  const [studFullName, setStudFullName] = useState<string>('');
+  const [studEmail, setStudEmail] = useState<string>('');
+  const [studStrand, setStudStrand] = useState<string>('STEM 12-A');
+  const [studYear, setStudYear] = useState<string>('Grade 12');
+  const [studStatus, setStudStatus] = useState<'Active' | 'Inactive' | 'Graduated'>('Active');
+  const [studFormError, setStudFormError] = useState<string>('');
 
   // Form fields
   const [name, setName] = useState<string>('');
@@ -224,6 +242,76 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     );
   });
 
+  // Student Roster Handlers
+  const openAddStudentModal = () => {
+    setEditingStudent(null);
+    setStudIdNum(`24-${Math.floor(1000 + Math.random() * 9000)}-01`);
+    setStudFullName('');
+    setStudEmail('');
+    setStudStrand('STEM 12-A');
+    setStudYear('Grade 12');
+    setStudStatus('Active');
+    setStudFormError('');
+    setIsStudentModalOpen(true);
+  };
+
+  const openEditStudentModal = (st: OfficialStudent) => {
+    setEditingStudent(st);
+    setStudIdNum(st.studentIdNumber);
+    setStudFullName(st.fullName);
+    setStudEmail(st.email);
+    setStudStrand(st.strandOrDepartment);
+    setStudYear(st.yearLevel || 'Grade 12');
+    setStudStatus(st.status);
+    setStudFormError('');
+    setIsStudentModalOpen(true);
+  };
+
+  const handleSaveStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studFullName.trim() || !studEmail.trim() || !studIdNum.trim()) {
+      setStudFormError('Student ID, Full Name, and Email are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStudFormError('');
+
+    try {
+      const studentObj: OfficialStudent = {
+        id: editingStudent ? editingStudent.id : `STUD-${Date.now()}`,
+        studentIdNumber: studIdNum.trim(),
+        fullName: studFullName.trim(),
+        email: studEmail.trim(),
+        strandOrDepartment: studStrand.trim(),
+        yearLevel: studYear,
+        status: studStatus,
+        issuedAt: editingStudent?.issuedAt || new Date().toISOString().slice(0, 10),
+      };
+
+      if (onSaveStudent) {
+        await onSaveStudent(studentObj);
+      }
+      setIsStudentModalOpen(false);
+    } catch (err: any) {
+      setStudFormError(err.message || 'Failed to save student record.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Filter Logic for Official Students
+  const filteredStudents = studentList.filter((st) => {
+    if (!studentSearchQuery.trim()) return true;
+    const q = studentSearchQuery.toLowerCase().trim();
+    return (
+      st.studentIdNumber.toLowerCase().includes(q) ||
+      st.fullName.toLowerCase().includes(q) ||
+      st.email.toLowerCase().includes(q) ||
+      st.strandOrDepartment.toLowerCase().includes(q)
+    );
+  });
+
   const handleExportCSV = () => {
     const headers = ['Tracking Code', 'Title', 'Category', 'Building', 'Room', 'Priority', 'Status', 'Assigned Staff', 'Filed Date', 'Student'];
     const rows = filtered.map((c) => [
@@ -279,7 +367,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex bg-slate-200 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab('table')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'table' ? 'bg-blue-900 text-amber-300 shadow' : 'text-slate-700'
               }`}
             >
@@ -287,11 +375,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('staff')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeTab === 'staff' ? 'bg-blue-900 text-amber-300 shadow' : 'text-slate-700'
               }`}
             >
-              Technicians Roster ({staffList.length})
+              Technicians ({staffList.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('students')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === 'students' ? 'bg-blue-900 text-amber-300 shadow' : 'text-slate-700'
+              }`}
+            >
+              Official Student DB ({studentList.length})
             </button>
           </div>
         </div>
@@ -711,6 +807,129 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+      {/* OFFICIAL STUDENT ROSTER VIEW */}
+      {activeTab === 'students' && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6 animate-fadeIn">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="bg-blue-100 text-blue-900 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase">
+                  Official Database
+                </span>
+                <span className="text-xs font-semibold text-slate-500">
+                  Pre-Verified CPU Student Credentials Store
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-blue-950 tracking-tight mt-1">
+                Official Student Directory & Credentials
+              </h3>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Official student records (Student ID Numbers, Full Names, CPU Emails, & Strands) synchronized live in Firestore.
+              </p>
+            </div>
+
+            <button
+              onClick={openAddStudentModal}
+              className="px-5 py-2.5 bg-blue-950 hover:bg-blue-900 text-amber-300 font-extrabold text-xs rounded-2xl shadow transition-colors flex items-center gap-2 shrink-0"
+            >
+              <UserPlus className="w-4 h-4 text-amber-400" />
+              <span>Add Official Student Record</span>
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <input
+                type="text"
+                placeholder="Search official student database by ID number, name, email, or strand..."
+                value={studentSearchQuery}
+                onChange={(e) => setStudentSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+          </div>
+
+          {/* Table */}
+          {filteredStudents.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 space-y-2">
+              <Users className="w-10 h-10 text-slate-300 mx-auto" />
+              <p className="font-bold text-sm">No official student records found.</p>
+              <p className="text-xs">Try adjusting your search query or click "Add Official Student Record".</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 uppercase font-black tracking-wider text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th className="p-3.5">Student ID Number</th>
+                    <th className="p-3.5">Full Name</th>
+                    <th className="p-3.5">Official CPU Email</th>
+                    <th className="p-3.5">Strand / Track</th>
+                    <th className="p-3.5">Year Level</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
+                  {filteredStudents.map((st) => (
+                    <tr key={st.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3.5 font-mono font-bold text-blue-950">{st.studentIdNumber}</td>
+                      <td className="p-3.5 font-extrabold text-slate-900">{st.fullName}</td>
+                      <td className="p-3.5 text-slate-600 font-mono text-[11px]">{st.email}</td>
+                      <td className="p-3.5">
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-900 font-bold rounded border border-amber-200 text-[11px]">
+                          {st.strandOrDepartment}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-slate-600">{st.yearLevel || 'Grade 12'}</td>
+                      <td className="p-3.5">
+                        <span
+                          className={`px-2 py-0.5 rounded font-black text-[10px] uppercase ${
+                            st.status === 'Active'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : st.status === 'Graduated'
+                              ? 'bg-blue-100 text-blue-900'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {st.status}
+                        </span>
+                      </td>
+                      <td className="p-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditStudentModal(st)}
+                            className="p-1.5 hover:bg-slate-200 text-blue-950 rounded-lg transition-colors"
+                            title="Edit Record"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          {onDeleteStudent && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove ${st.fullName} from official student directory?`)) {
+                                  onDeleteStudent(st.id);
+                                }
+                              }}
+                              className="p-1.5 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                              title="Delete Record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ADD / EDIT STAFF MODAL */}
       {isStaffModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
@@ -906,6 +1125,150 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <span>Yes, Remove Staff</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT STUDENT RECORD MODAL */}
+      {isStudentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden space-y-0">
+            {/* Modal Header */}
+            <div className="bg-blue-950 text-white p-5 flex items-center justify-between border-b border-blue-900">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-400 text-blue-950 rounded-xl flex items-center justify-center font-black">
+                  {editingStudent ? <Pencil className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-tight">
+                    {editingStudent ? 'Edit Official Student Credentials' : 'Add Official Student Record'}
+                  </h3>
+                  <p className="text-xs text-amber-300 font-semibold">
+                    {editingStudent ? `Updating details for ${editingStudent.fullName}` : 'Store administration-provided official details in Firestore'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsStudentModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-blue-900 rounded-xl transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveStudentSubmit} className="p-6 space-y-4 text-xs font-semibold text-slate-800">
+              {studFormError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl flex items-center gap-2 text-xs font-bold">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{studFormError}</span>
+                </div>
+              )}
+
+              {/* Student ID Number */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-extrabold">
+                  Official Student ID Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 21-0492-01"
+                  value={studIdNum}
+                  onChange={(e) => setStudIdNum(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-mono font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  required
+                />
+              </div>
+
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-extrabold">
+                  Student Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Juan De La Cruz"
+                  value={studFullName}
+                  onChange={(e) => setStudFullName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  required
+                />
+              </div>
+
+              {/* Official CPU Email */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-extrabold">
+                  Official CPU Student Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  placeholder="e.g. student.shs@cpu.edu.ph"
+                  value={studEmail}
+                  onChange={(e) => setStudEmail(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-mono font-semibold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  required
+                />
+              </div>
+
+              {/* Strand & Year Level */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-slate-700 font-extrabold">Strand / Section</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. STEM 12-A"
+                    value={studStrand}
+                    onChange={(e) => setStudStrand(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-slate-700 font-extrabold">Year Level</label>
+                  <select
+                    value={studYear}
+                    onChange={(e) => setStudYear(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                  >
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Account Status */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-extrabold">Record Status</label>
+                <select
+                  value={studStatus}
+                  onChange={(e) => setStudStatus(e.target.value as any)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                >
+                  <option value="Active">Active Student</option>
+                  <option value="Graduated">Graduated Alumni</option>
+                  <option value="Inactive">Inactive / Suspended</option>
+                </select>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsStudentModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-blue-950 hover:bg-blue-900 text-amber-300 font-black rounded-xl shadow transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingStudent ? 'Save Changes' : 'Save Record'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -96,6 +96,17 @@ export interface MaintenanceStaff {
   activeWorkload: number;
 }
 
+export interface OfficialStudent {
+  id: string;
+  studentIdNumber: string;
+  fullName: string;
+  email: string;
+  strandOrDepartment: string;
+  yearLevel?: string;
+  status: 'Active' | 'Inactive' | 'Graduated';
+  issuedAt?: string;
+}
+
 export interface SystemStats {
   totalComplaints: number;
   filedCount: number;

@@ -1,4 +1,67 @@
-import { Complaint, MaintenanceStaff, SurveyResponse } from '../types';
+import { Complaint, MaintenanceStaff, OfficialStudent, SurveyResponse } from '../types';
+
+export const INITIAL_STUDENTS: OfficialStudent[] = [
+  {
+    id: 'STUD-2026-001',
+    studentIdNumber: '21-0492-01',
+    fullName: 'Juan De La Cruz',
+    email: 'student.shs@cpu.edu.ph',
+    strandOrDepartment: 'STEM 12-A',
+    yearLevel: 'Grade 12',
+    status: 'Active',
+    issuedAt: '2026-06-01',
+  },
+  {
+    id: 'STUD-2026-002',
+    studentIdNumber: '21-0588-02',
+    fullName: 'Marc Vincent Reyes',
+    email: 'm.reyes.student@shs.edu.ph',
+    strandOrDepartment: 'STEM 12-A',
+    yearLevel: 'Grade 12',
+    status: 'Active',
+    issuedAt: '2026-06-01',
+  },
+  {
+    id: 'STUD-2026-003',
+    studentIdNumber: '22-1102-03',
+    fullName: 'Alyssa Mendoza',
+    email: 'alyssa.mendoza@shs.edu.ph',
+    strandOrDepartment: 'STEM 11-C',
+    yearLevel: 'Grade 11',
+    status: 'Active',
+    issuedAt: '2026-06-01',
+  },
+  {
+    id: 'STUD-2026-004',
+    studentIdNumber: '21-0943-04',
+    fullName: 'Joshua Tan',
+    email: 'joshua.tan@shs.edu.ph',
+    strandOrDepartment: 'ABM 12-B',
+    yearLevel: 'Grade 12',
+    status: 'Active',
+    issuedAt: '2026-06-01',
+  },
+  {
+    id: 'STUD-2026-005',
+    studentIdNumber: '21-0312-05',
+    fullName: 'Bea Patricia Cruz',
+    email: 'bea.cruz@shs.edu.ph',
+    strandOrDepartment: 'TVL-ICT 12-A',
+    yearLevel: 'Grade 12',
+    status: 'Active',
+    issuedAt: '2026-06-01',
+  },
+  {
+    id: 'STUD-2026-006',
+    studentIdNumber: '21-0771-06',
+    fullName: 'Gabriel Fernandez',
+    email: 'gab.fernandez@shs.edu.ph',
+    strandOrDepartment: 'SPORTS 12-A',
+    yearLevel: 'Grade 12',
+    status: 'Active',
+    issuedAt: '2026-06-01',
+  },
+];
 
 export const INITIAL_STAFF: MaintenanceStaff[] = [
   {

@@ -14,15 +14,28 @@ import { PublicTracker } from './components/PublicTracker';
 import { ResearchInfoModal } from './components/ResearchInfoModal';
 import { ComplaintDetailsModal } from './components/ComplaintDetailsModal';
 import { LoginModal } from './components/LoginModal';
-import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole } from './types';
-import { INITIAL_COMPLAINTS, INITIAL_STAFF } from './data/initialData';
+import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole, OfficialStudent } from './types';
+import { INITIAL_COMPLAINTS, INITIAL_STAFF, INITIAL_STUDENTS } from './data/initialData';
 import { PRESET_USERS } from './data/authData';
+import {
+  subscribeToComplaints,
+  subscribeToStudents,
+  subscribeToStaff,
+  subscribeToSurveys,
+  addComplaintToDb,
+  updateComplaintInDb,
+  saveStudentToDb,
+  deleteStudentFromDb,
+  saveStaffToDb,
+  deleteStaffFromDb,
+} from './lib/firestoreService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'student' | 'admin' | 'analytics' | 'research'>('home');
   const [complaints, setComplaints] = useState<Complaint[]>(INITIAL_COMPLAINTS);
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [staffList, setStaffList] = useState<MaintenanceStaff[]>(INITIAL_STAFF);
+  const [studentList, setStudentList] = useState<OfficialStudent[]>(INITIAL_STUDENTS);
 
   // Authentication state
   const [currentUser, setCurrentUser] = useState<UserSession | null>(PRESET_USERS.student);
@@ -35,18 +48,37 @@ export default function App() {
   const [trackerCode, setTrackerCode] = useState<string>('');
   const [isResearchModalOpen, setIsResearchModalOpen] = useState<boolean>(false);
 
-  // Fetch data on mount
-  const fetchComplaints = async () => {
-    try {
-      const res = await fetch('/api/complaints?includeArchived=true');
-      if (res.ok) {
-        const data = await res.json();
-        setComplaints(data);
-      }
-    } catch (err) {
-      console.warn('Backend fetch failed, using local state:', err);
-    }
-  };
+  // Real-time Firestore sync on mount
+  useEffect(() => {
+    // 1. Subscribe to complaints in Firestore
+    const unsubscribeComplaints = subscribeToComplaints((liveComplaints) => {
+      setComplaints(liveComplaints);
+    });
+
+    // 2. Subscribe to official students in Firestore
+    const unsubscribeStudents = subscribeToStudents((liveStudents) => {
+      setStudentList(liveStudents);
+    });
+
+    // 3. Subscribe to staff in Firestore (auto-seeds staff collection if empty)
+    const unsubscribeStaff = subscribeToStaff((liveStaff) => {
+      setStaffList(liveStaff);
+    });
+
+    // 4. Subscribe to surveys in Firestore (auto-seeds surveys collection if empty)
+    const unsubscribeSurveys = subscribeToSurveys(() => {
+      // surveys seeded and synchronized in Firestore
+    });
+
+    fetchStats();
+
+    return () => {
+      unsubscribeComplaints();
+      unsubscribeStudents();
+      unsubscribeStaff();
+      unsubscribeSurveys();
+    };
+  }, []);
 
   const fetchStats = async () => {
     try {
@@ -72,13 +104,8 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    fetchComplaints();
-    fetchStats();
-    fetchStaff();
-  }, []);
-
   const handleCreateComplaint = async (newReportData: any): Promise<Complaint> => {
+    let created: Complaint;
     try {
       const res = await fetch('/api/complaints', {
         method: 'POST',
@@ -87,10 +114,7 @@ export default function App() {
       });
 
       if (res.ok) {
-        const created: Complaint = await res.json();
-        setComplaints((prev) => [created, ...prev]);
-        fetchStats();
-        return created;
+        created = await res.json();
       } else {
         throw new Error('Server returned error');
       }
@@ -98,7 +122,7 @@ export default function App() {
       // Fallback local creation if offline
       const now = new Date().toISOString();
       const code = `CENT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const fallback: Complaint = {
+      created = {
         id: `CMP-${Date.now()}`,
         trackingCode: code,
         title: newReportData.title,
@@ -126,30 +150,60 @@ export default function App() {
         updatedAt: now,
         isArchived: false,
       };
-
-      setComplaints((prev) => [fallback, ...prev]);
-      return fallback;
     }
+
+    // Always persist to live Firestore database
+    try {
+      await addComplaintToDb(created);
+    } catch (e) {
+      console.warn('Firestore add complaint error:', e);
+    }
+
+    setComplaints((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+    fetchStats();
+    return created;
   };
 
   const handleUpdateComplaint = async (id: string, updates: any) => {
     try {
-      const res = await fetch(`/api/complaints/${id}`, {
+      await fetch(`/api/complaints/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
-
-      if (res.ok) {
-        const updatedItem: Complaint = await res.json();
-        setComplaints((prev) => prev.map((c) => (c.id === id ? updatedItem : c)));
-        if (selectedComplaint?.id === id) {
-          setSelectedComplaint(updatedItem);
-        }
-        fetchStats();
-      }
     } catch (err) {
-      console.error('Failed to update complaint:', err);
+      console.warn('API update failed, applying to Firestore directly:', err);
+    }
+
+    // Persist update in Firestore
+    try {
+      await updateComplaintInDb(id, updates);
+    } catch (e) {
+      console.warn('Firestore update complaint error:', e);
+    }
+
+    fetchStats();
+  };
+
+  const handleSaveStudent = async (student: OfficialStudent) => {
+    try {
+      await saveStudentToDb(student);
+    } catch (err) {
+      console.error('Failed to save student to Firestore:', err);
+      setStudentList((prev) => {
+        const exists = prev.some((s) => s.id === student.id);
+        if (exists) return prev.map((s) => (s.id === student.id ? student : s));
+        return [...prev, student];
+      });
+    }
+  };
+
+  const handleDeleteStudent = async (id: string) => {
+    try {
+      await deleteStudentFromDb(id);
+    } catch (err) {
+      console.error('Failed to delete student from Firestore:', err);
+      setStudentList((prev) => prev.filter((s) => s.id !== id));
     }
   };
 
@@ -175,6 +229,7 @@ export default function App() {
   };
 
   const handleCreateStaff = async (staffData: Omit<MaintenanceStaff, 'id' | 'activeWorkload'>) => {
+    let created: MaintenanceStaff;
     try {
       const res = await fetch('/api/staff', {
         method: 'POST',
@@ -182,51 +237,56 @@ export default function App() {
         body: JSON.stringify(staffData),
       });
       if (res.ok) {
-        const created = await res.json();
-        setStaffList((prev) => [...prev, created]);
-        fetchStaff();
+        created = await res.json();
+      } else {
+        throw new Error('Server creation failed');
       }
     } catch (err) {
-      console.error('Failed to create staff:', err);
-      const fallback: MaintenanceStaff = {
+      console.warn('Backend API create staff failed, using Firestore fallback:', err);
+      created = {
         id: `ST-${Date.now().toString().slice(-4)}`,
         ...staffData,
         activeWorkload: 0,
       };
-      setStaffList((prev) => [...prev, fallback]);
+    }
+    try {
+      await saveStaffToDb(created);
+    } catch (e) {
+      console.warn('Firestore save staff error:', e);
     }
   };
 
   const handleUpdateStaff = async (id: string, updates: Partial<MaintenanceStaff>) => {
     try {
-      const res = await fetch(`/api/staff/${id}`, {
+      await fetch(`/api/staff/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setStaffList((prev) => prev.map((s) => (s.id === id ? updated : s)));
-        fetchStaff();
-        fetchComplaints();
-      }
     } catch (err) {
-      console.error('Failed to update staff:', err);
-      setStaffList((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+      console.warn('Backend API update staff failed:', err);
+    }
+    const existing = staffList.find((s) => s.id === id);
+    if (existing) {
+      const updatedMember = { ...existing, ...updates };
+      try {
+        await saveStaffToDb(updatedMember);
+      } catch (e) {
+        console.warn('Firestore update staff error:', e);
+      }
     }
   };
 
   const handleDeleteStaff = async (id: string) => {
     try {
-      const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setStaffList((prev) => prev.filter((s) => s.id !== id));
-        fetchStaff();
-        fetchComplaints();
-      }
+      await fetch(`/api/staff/${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.error('Failed to delete staff:', err);
-      setStaffList((prev) => prev.filter((s) => s.id !== id));
+      console.warn('Backend API delete staff failed:', err);
+    }
+    try {
+      await deleteStaffFromDb(id);
+    } catch (e) {
+      console.warn('Firestore delete staff error:', e);
     }
   };
 
@@ -434,14 +494,16 @@ export default function App() {
               complaints={complaints}
               stats={stats}
               staffList={staffList}
+              studentList={studentList}
               onSelectComplaint={(c) => setSelectedComplaint(c)}
               onUpdateComplaintStatus={handleUpdateComplaintStatus}
               onArchiveComplaint={handleArchiveComplaint}
               onAddStaff={handleCreateStaff}
               onUpdateStaff={handleUpdateStaff}
               onDeleteStaff={handleDeleteStaff}
+              onSaveStudent={handleSaveStudent}
+              onDeleteStudent={handleDeleteStudent}
               onRefreshData={() => {
-                fetchComplaints();
                 fetchStats();
                 fetchStaff();
               }}

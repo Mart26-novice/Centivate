@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "complaints": {
+      "title": "Complaints",
+      "description": "Facility complaints and reports filed by students",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "trackingCode": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "locationBuilding": { "type": "string" },
+        "locationRoom": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentStrand": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "contactEmail": { "type": "string" },
+        "assignedStaff": { "type": "string" },
+        "estimatedResolutionDate": { "type": "string" },
+        "resolutionNotes": { "type": "string" },
+        "resolutionPhotoUrl": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "isArchived": { "type": "boolean" }
+      },
+      "required": ["trackingCode", "title", "description", "category", "status"]
+    },
+    "students": {
+      "title": "Official Student Database",
+      "description": "Official pre-verified student records provided by administration",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "strandOrDepartment": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["studentId", "fullName", "email"]
+    },
+    "surveys": {
+      "title": "Survey Responses",
+      "description": "System usability and feedback survey responses",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string" },
+        "susQ1": { "type": "number" },
+        "susQ2": { "type": "number" },
+        "susQ3": { "type": "number" },
+        "susQ4": { "type": "number" },
+        "susQ5": { "type": "number" },
+        "feedbackComments": { "type": "string" },
+        "submittedAt": { "type": "string" }
+      },
+      "required": ["role", "submittedAt"]
+    },
+    "staff": {
+      "title": "Maintenance Staff",
+      "description": "CPPO Maintenance staff directory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "specialty": { "type": "string" },
+        "phone": { "type": "string" },
+        "activeWorkload": { "type": "number" }
+      },
+      "required": ["name", "role"]
+    }
+  }
+}
