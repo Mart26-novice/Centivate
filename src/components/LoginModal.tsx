@@ -21,7 +21,7 @@ import { PRESET_USERS } from '../data/authData';
 import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import campusBg from '../assets/images/cpu_campus_aerial.webp';
+import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
 
 interface LoginModalProps {
   isOpen: boolean;
