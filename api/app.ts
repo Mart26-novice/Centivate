@@ -1,16 +1,97 @@
 import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  setDoc,
+  deleteDoc,
+} from 'firebase/firestore';
+import { db } from '../src/lib/firebase.ts';
 import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData.ts';
-import { Complaint, ComplaintPriority, ComplaintCategory, ComplaintStatus, SurveyResponse, StatusLog, SystemStats, MaintenanceStaff } from '../src/types.ts';
+import {
+  Complaint,
+  ComplaintPriority,
+  ComplaintCategory,
+  ComplaintStatus,
+  SurveyResponse,
+  StatusLog,
+  SystemStats,
+  MaintenanceStaff,
+} from '../src/types.ts';
 
 const app = express();
 
 app.use(express.json({ limit: '10mb' }));
 
-// In-memory data store with initial seed
-let complaintsStore: Complaint[] = JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
-let surveyStore: SurveyResponse[] = JSON.parse(JSON.stringify(INITIAL_SURVEYS));
-let staffStore: MaintenanceStaff[] = JSON.parse(JSON.stringify(INITIAL_STAFF));
+const COMPLAINTS_COL = 'complaints';
+const SURVEYS_COL = 'surveys';
+const STAFF_COL = 'staff';
+
+// Helper to retrieve complaints from Firestore (seeding if empty)
+async function getComplaintsFromFirestore(): Promise<Complaint[]> {
+  try {
+    const snapshot = await getDocs(collection(db, COMPLAINTS_COL));
+    if (snapshot.empty) {
+      for (const item of INITIAL_COMPLAINTS) {
+        await setDoc(doc(db, COMPLAINTS_COL, item.id), item);
+      }
+      return JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
+    }
+    const items: Complaint[] = [];
+    snapshot.forEach((d) => {
+      items.push({ id: d.id, ...d.data() } as Complaint);
+    });
+    items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return items;
+  } catch (err) {
+    console.warn('Firestore fetch complaints error in server API, using fallback:', err);
+    return JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
+  }
+}
+
+// Helper to retrieve surveys from Firestore (seeding if empty)
+async function getSurveysFromFirestore(): Promise<SurveyResponse[]> {
+  try {
+    const snapshot = await getDocs(collection(db, SURVEYS_COL));
+    if (snapshot.empty) {
+      for (const item of INITIAL_SURVEYS) {
+        await setDoc(doc(db, SURVEYS_COL, item.id), item);
+      }
+      return JSON.parse(JSON.stringify(INITIAL_SURVEYS));
+    }
+    const items: SurveyResponse[] = [];
+    snapshot.forEach((d) => {
+      items.push({ id: d.id, ...d.data() } as SurveyResponse);
+    });
+    return items;
+  } catch (err) {
+    console.warn('Firestore fetch surveys error in server API, using fallback:', err);
+    return JSON.parse(JSON.stringify(INITIAL_SURVEYS));
+  }
+}
+
+// Helper to retrieve staff from Firestore (seeding if empty)
+async function getStaffFromFirestore(): Promise<MaintenanceStaff[]> {
+  try {
+    const snapshot = await getDocs(collection(db, STAFF_COL));
+    if (snapshot.empty) {
+      for (const item of INITIAL_STAFF) {
+        await setDoc(doc(db, STAFF_COL, item.id), item);
+      }
+      return JSON.parse(JSON.stringify(INITIAL_STAFF));
+    }
+    const items: MaintenanceStaff[] = [];
+    snapshot.forEach((d) => {
+      items.push({ id: d.id, ...d.data() } as MaintenanceStaff);
+    });
+    return items;
+  } catch (err) {
+    console.warn('Firestore fetch staff error in server API, using fallback:', err);
+    return JSON.parse(JSON.stringify(INITIAL_STAFF));
+  }
+}
 
 // Lazy Gemini AI Client helper
 function getGeminiClient(): GoogleGenAI | null {
@@ -40,11 +121,11 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', appName: 'Centivate Complaint System' });
 });
 
-// 2. Get all complaints
-app.get('/api/complaints', (req, res) => {
+// 2. Get all complaints from Firestore
+app.get('/api/complaints', async (req, res) => {
   const { status, category, building, search, includeArchived } = req.query;
 
-  let filtered = [...complaintsStore];
+  let filtered = await getComplaintsFromFirestore();
 
   if (includeArchived !== 'true') {
     filtered = filtered.filter((c) => !c.isArchived);
@@ -81,9 +162,10 @@ app.get('/api/complaints', (req, res) => {
 });
 
 // 3. Track complaint by code
-app.get('/api/complaints/track/:code', (req, res) => {
+app.get('/api/complaints/track/:code', async (req, res) => {
   const code = req.params.code.trim().toUpperCase();
-  const found = complaintsStore.find((c) => c.trackingCode.toUpperCase() === code);
+  const complaints = await getComplaintsFromFirestore();
+  const found = complaints.find((c) => c.trackingCode.toUpperCase() === code);
 
   if (!found) {
     return res.status(404).json({ error: 'Complaint not found with this tracking code.' });
@@ -111,7 +193,7 @@ app.get('/api/complaints/track/:code', (req, res) => {
   });
 });
 
-// 4. Create new complaint
+// 4. Create new complaint in Firestore
 app.post('/api/complaints', async (req, res) => {
   try {
     const {
@@ -218,15 +300,20 @@ Provide a short urgency reason, a recommended maintenance action plan, and wheth
       }
     }
 
-    complaintsStore.unshift(newComplaint);
+    try {
+      await setDoc(doc(db, COMPLAINTS_COL, newComplaint.id), newComplaint);
+    } catch (dbErr) {
+      console.error('Failed to save complaint to Firestore:', dbErr);
+    }
+
     res.status(201).json(newComplaint);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to create complaint.' });
   }
 });
 
-// 5. Update complaint status / details
-app.patch('/api/complaints/:id', (req, res) => {
+// 5. Update complaint status / details in Firestore
+app.patch('/api/complaints/:id', async (req, res) => {
   const { id } = req.params;
   const {
     status,
@@ -240,123 +327,148 @@ app.patch('/api/complaints/:id', (req, res) => {
     isArchived,
   } = req.body;
 
-  const index = complaintsStore.findIndex((c) => c.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Complaint not found' });
+  try {
+    const docRef = doc(db, COMPLAINTS_COL, id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return res.status(404).json({ error: 'Complaint not found' });
+    }
+
+    const item = docSnap.data() as Complaint;
+    const now = new Date().toISOString();
+
+    if (!item.logs) {
+      item.logs = [];
+    }
+
+    if (status && status !== item.status) {
+      item.status = status as ComplaintStatus;
+      item.logs.push({
+        id: `LOG-${Date.now()}`,
+        status: status as ComplaintStatus,
+        note: note || `Status updated to ${status}.`,
+        updatedBy: updatedBy || 'Administrator',
+        timestamp: now,
+      });
+    } else if (note) {
+      item.logs.push({
+        id: `LOG-${Date.now()}`,
+        status: item.status,
+        note,
+        updatedBy: updatedBy || 'Administrator',
+        timestamp: now,
+      });
+    }
+
+    if (priority) item.priority = priority;
+    if (assignedStaff !== undefined) item.assignedStaff = assignedStaff;
+    if (estimatedResolutionDate !== undefined) item.estimatedResolutionDate = estimatedResolutionDate;
+    if (resolutionNotes !== undefined) item.resolutionNotes = resolutionNotes;
+    if (resolutionPhotoUrl !== undefined) item.resolutionPhotoUrl = resolutionPhotoUrl;
+    if (isArchived !== undefined) item.isArchived = isArchived;
+
+    item.updatedAt = now;
+
+    await setDoc(docRef, item);
+
+    res.json(item);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update complaint' });
   }
-
-  const item = complaintsStore[index];
-  const now = new Date().toISOString();
-
-  if (status && status !== item.status) {
-    item.status = status as ComplaintStatus;
-    item.logs.push({
-      id: `LOG-${Date.now()}`,
-      status: status as ComplaintStatus,
-      note: note || `Status updated to ${status}.`,
-      updatedBy: updatedBy || 'Administrator',
-      timestamp: now,
-    });
-  } else if (note) {
-    item.logs.push({
-      id: `LOG-${Date.now()}`,
-      status: item.status,
-      note,
-      updatedBy: updatedBy || 'Administrator',
-      timestamp: now,
-    });
-  }
-
-  if (priority) item.priority = priority;
-  if (assignedStaff !== undefined) item.assignedStaff = assignedStaff;
-  if (estimatedResolutionDate !== undefined) item.estimatedResolutionDate = estimatedResolutionDate;
-  if (resolutionNotes !== undefined) item.resolutionNotes = resolutionNotes;
-  if (resolutionPhotoUrl !== undefined) item.resolutionPhotoUrl = resolutionPhotoUrl;
-  if (isArchived !== undefined) item.isArchived = isArchived;
-
-  item.updatedAt = now;
-  complaintsStore[index] = item;
-
-  res.json(item);
 });
 
-// 6. Delete or Archive
-app.delete('/api/complaints/:id', (req, res) => {
+// 6. Delete or Archive in Firestore
+app.delete('/api/complaints/:id', async (req, res) => {
   const { id } = req.params;
-  const index = complaintsStore.findIndex((c) => c.id === id);
+  try {
+    const docRef = doc(db, COMPLAINTS_COL, id);
+    const docSnap = await getDoc(docRef);
 
-  if (index === -1) {
-    return res.status(404).json({ error: 'Complaint not found' });
+    if (!docSnap.exists()) {
+      return res.status(404).json({ error: 'Complaint not found' });
+    }
+
+    const item = docSnap.data() as Complaint;
+    item.isArchived = true;
+    item.updatedAt = new Date().toISOString();
+
+    await setDoc(docRef, item);
+
+    res.json({ message: 'Complaint archived successfully', id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to archive complaint' });
   }
-
-  // Soft archive
-  complaintsStore[index].isArchived = true;
-  complaintsStore[index].updatedAt = new Date().toISOString();
-
-  res.json({ message: 'Complaint archived successfully', id });
 });
 
-// 7. System statistics endpoint
-app.get('/api/stats', (_req, res) => {
-  const active = complaintsStore.filter((c) => !c.isArchived);
+// 7. System statistics endpoint computed from real Firestore data
+app.get('/api/stats', async (_req, res) => {
+  try {
+    const complaintsStore = await getComplaintsFromFirestore();
+    const surveyStore = await getSurveysFromFirestore();
 
-  const totalComplaints = active.length;
-  const filedCount = active.filter((c) => c.status === 'Filed').length;
-  const pendingCount = active.filter((c) => c.status === 'Pending').length;
-  const inProgressCount = active.filter((c) => c.status === 'In Progress').length;
-  const resolvedCount = active.filter((c) => c.status === 'Resolved').length;
-  const cancelledCount = active.filter((c) => c.status === 'Cancelled').length;
-  const urgentHazardCount = active.filter((c) => c.priority === 'Urgent / Hazard' || c.priority === 'High').length;
+    const active = complaintsStore.filter((c) => !c.isArchived);
 
-  // Category breakdown
-  const categoryBreakdown: Record<string, number> = {};
-  active.forEach((c) => {
-    categoryBreakdown[c.category] = (categoryBreakdown[c.category] || 0) + 1;
-  });
+    const totalComplaints = active.length;
+    const filedCount = active.filter((c) => c.status === 'Filed').length;
+    const pendingCount = active.filter((c) => c.status === 'Pending').length;
+    const inProgressCount = active.filter((c) => c.status === 'In Progress').length;
+    const resolvedCount = active.filter((c) => c.status === 'Resolved').length;
+    const cancelledCount = active.filter((c) => c.status === 'Cancelled').length;
+    const urgentHazardCount = active.filter((c) => c.priority === 'Urgent / Hazard' || c.priority === 'High').length;
 
-  // Building breakdown
-  const buildingBreakdown: Record<string, number> = {};
-  active.forEach((c) => {
-    buildingBreakdown[c.locationBuilding] = (buildingBreakdown[c.locationBuilding] || 0) + 1;
-  });
+    // Category breakdown
+    const categoryBreakdown: Record<string, number> = {};
+    active.forEach((c) => {
+      categoryBreakdown[c.category] = (categoryBreakdown[c.category] || 0) + 1;
+    });
 
-  // Calculate avg resolution time in hours
-  const resolvedItems = active.filter((c) => c.status === 'Resolved');
-  let totalHours = 0;
-  resolvedItems.forEach((c) => {
-    const created = new Date(c.createdAt).getTime();
-    const updated = new Date(c.updatedAt).getTime();
-    const diffMs = Math.max(0, updated - created);
-    totalHours += diffMs / (1000 * 60 * 60);
-  });
+    // Building breakdown
+    const buildingBreakdown: Record<string, number> = {};
+    active.forEach((c) => {
+      buildingBreakdown[c.locationBuilding] = (buildingBreakdown[c.locationBuilding] || 0) + 1;
+    });
 
-  const avgResolutionTimeHours = resolvedItems.length > 0 ? parseFloat((totalHours / resolvedItems.length).toFixed(1)) : 24.0;
+    // Calculate avg resolution time in hours
+    const resolvedItems = active.filter((c) => c.status === 'Resolved');
+    let totalHours = 0;
+    resolvedItems.forEach((c) => {
+      const created = new Date(c.createdAt).getTime();
+      const updated = new Date(c.updatedAt).getTime();
+      const diffMs = Math.max(0, updated - created);
+      totalHours += diffMs / (1000 * 60 * 60);
+    });
 
-  // Survey metrics
-  const surveyCount = surveyStore.length;
-  let totalScore = 0;
-  surveyStore.forEach((s) => {
-    const avg = (s.susQ1 + s.susQ2 + s.susQ3 + s.susQ4 + s.susQ5) / 5;
-    totalScore += avg;
-  });
-  const avgSatisfactionScore = surveyCount > 0 ? parseFloat((totalScore / surveyCount).toFixed(2)) : 4.67;
+    const avgResolutionTimeHours = resolvedItems.length > 0 ? parseFloat((totalHours / resolvedItems.length).toFixed(1)) : 24.0;
 
-  const stats: SystemStats = {
-    totalComplaints,
-    filedCount,
-    pendingCount,
-    inProgressCount,
-    resolvedCount,
-    cancelledCount,
-    urgentHazardCount,
-    avgResolutionTimeHours,
-    categoryBreakdown,
-    buildingBreakdown,
-    surveyCount,
-    avgSatisfactionScore,
-  };
+    // Survey metrics
+    const surveyCount = surveyStore.length;
+    let totalScore = 0;
+    surveyStore.forEach((s) => {
+      const avg = (s.susQ1 + s.susQ2 + s.susQ3 + s.susQ4 + s.susQ5) / 5;
+      totalScore += avg;
+    });
+    const avgSatisfactionScore = surveyCount > 0 ? parseFloat((totalScore / surveyCount).toFixed(2)) : 4.67;
 
-  res.json(stats);
+    const stats: SystemStats = {
+      totalComplaints,
+      filedCount,
+      pendingCount,
+      inProgressCount,
+      resolvedCount,
+      cancelledCount,
+      urgentHazardCount,
+      avgResolutionTimeHours,
+      categoryBreakdown,
+      buildingBreakdown,
+      surveyCount,
+      avgSatisfactionScore,
+    };
+
+    res.json(stats);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to compute stats' });
+  }
 });
 
 // 8. Gemini AI Complaint Analysis on demand
@@ -425,11 +537,12 @@ Return a JSON object with:
 });
 
 // 9. Surveys
-app.get('/api/surveys', (_req, res) => {
+app.get('/api/surveys', async (_req, res) => {
+  const surveyStore = await getSurveysFromFirestore();
   res.json(surveyStore);
 });
 
-app.post('/api/surveys', (req, res) => {
+app.post('/api/surveys', async (req, res) => {
   const { role, susQ1, susQ2, susQ3, susQ4, susQ5, feedbackComments } = req.body;
 
   const newSurvey: SurveyResponse = {
@@ -444,12 +557,20 @@ app.post('/api/surveys', (req, res) => {
     submittedAt: new Date().toISOString(),
   };
 
-  surveyStore.unshift(newSurvey);
+  try {
+    await setDoc(doc(db, SURVEYS_COL, newSurvey.id), newSurvey);
+  } catch (err) {
+    console.error('Failed to save survey to Firestore:', err);
+  }
+
   res.status(201).json(newSurvey);
 });
 
 // 10. Staff Management Endpoints
-app.get('/api/staff', (_req, res) => {
+app.get('/api/staff', async (_req, res) => {
+  const staffStore = await getStaffFromFirestore();
+  const complaintsStore = await getComplaintsFromFirestore();
+
   const activeStaffList = staffStore.map((st) => {
     const activeCount = complaintsStore.filter(
       (c) =>
@@ -467,7 +588,7 @@ app.get('/api/staff', (_req, res) => {
   res.json(activeStaffList);
 });
 
-app.post('/api/staff', (req, res) => {
+app.post('/api/staff', async (req, res) => {
   const { name, role, specialty, phone } = req.body;
   if (!name || !role || !specialty) {
     return res.status(400).json({ error: 'Name, role, and specialty are required.' });
@@ -482,64 +603,88 @@ app.post('/api/staff', (req, res) => {
     activeWorkload: 0,
   };
 
-  staffStore.push(newStaff);
+  try {
+    await setDoc(doc(db, STAFF_COL, newStaff.id), newStaff);
+  } catch (err) {
+    console.error('Failed to save staff to Firestore:', err);
+  }
+
   res.status(201).json(newStaff);
 });
 
-app.patch('/api/staff/:id', (req, res) => {
+app.patch('/api/staff/:id', async (req, res) => {
   const { id } = req.params;
   const { name, role, specialty, phone } = req.body;
 
-  const index = staffStore.findIndex((s) => s.id === id);
-  if (index === -1) {
-    return res.status(404).json({ error: 'Staff member not found.' });
-  }
+  try {
+    const docRef = doc(db, STAFF_COL, id);
+    const docSnap = await getDoc(docRef);
 
-  const currentName = staffStore[index].name;
-  const updatedName = name ? name.trim() : currentName;
+    if (!docSnap.exists()) {
+      return res.status(404).json({ error: 'Staff member not found.' });
+    }
 
-  if (name && currentName !== updatedName) {
-    complaintsStore.forEach((c) => {
-      if (c.assignedStaff && c.assignedStaff.trim().toLowerCase() === currentName.toLowerCase()) {
-        c.assignedStaff = updatedName;
+    const currentStaff = docSnap.data() as MaintenanceStaff;
+    const currentName = currentStaff.name;
+    const updatedName = name ? name.trim() : currentName;
+
+    if (name && currentName !== updatedName) {
+      const complaints = await getComplaintsFromFirestore();
+      for (const c of complaints) {
+        if (c.assignedStaff && c.assignedStaff.trim().toLowerCase() === currentName.toLowerCase()) {
+          c.assignedStaff = updatedName;
+          await setDoc(doc(db, COMPLAINTS_COL, c.id), c);
+        }
       }
-    });
+    }
+
+    const updatedStaff: MaintenanceStaff = {
+      ...currentStaff,
+      name: updatedName,
+      role: role ? role.trim() : currentStaff.role,
+      specialty: specialty ? (specialty as ComplaintCategory) : currentStaff.specialty,
+      phone: phone !== undefined ? phone.trim() : currentStaff.phone,
+    };
+
+    await setDoc(docRef, updatedStaff);
+
+    res.json(updatedStaff);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update staff member' });
   }
-
-  staffStore[index] = {
-    ...staffStore[index],
-    name: updatedName,
-    role: role ? role.trim() : staffStore[index].role,
-    specialty: specialty ? (specialty as ComplaintCategory) : staffStore[index].specialty,
-    phone: phone !== undefined ? phone.trim() : staffStore[index].phone,
-  };
-
-  res.json(staffStore[index]);
 });
 
-app.delete('/api/staff/:id', (req, res) => {
+app.delete('/api/staff/:id', async (req, res) => {
   const { id } = req.params;
-  const index = staffStore.findIndex((s) => s.id === id);
 
-  if (index === -1) {
-    return res.status(404).json({ error: 'Staff member not found.' });
-  }
+  try {
+    const docRef = doc(db, STAFF_COL, id);
+    const docSnap = await getDoc(docRef);
 
-  const removed = staffStore[index];
-  staffStore.splice(index, 1);
-
-  complaintsStore.forEach((c) => {
-    if (
-      !c.isArchived &&
-      c.status !== 'Resolved' &&
-      c.assignedStaff &&
-      c.assignedStaff.trim().toLowerCase() === removed.name.trim().toLowerCase()
-    ) {
-      c.assignedStaff = '';
+    if (!docSnap.exists()) {
+      return res.status(404).json({ error: 'Staff member not found.' });
     }
-  });
 
-  res.json({ message: 'Staff member removed successfully.', id });
+    const removed = docSnap.data() as MaintenanceStaff;
+    await deleteDoc(docRef);
+
+    const complaints = await getComplaintsFromFirestore();
+    for (const c of complaints) {
+      if (
+        !c.isArchived &&
+        c.status !== 'Resolved' &&
+        c.assignedStaff &&
+        c.assignedStaff.trim().toLowerCase() === removed.name.trim().toLowerCase()
+      ) {
+        c.assignedStaff = '';
+        await setDoc(doc(db, COMPLAINTS_COL, c.id), c);
+      }
+    }
+
+    res.json({ message: 'Staff member removed successfully.', id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to delete staff member' });
+  }
 });
 
 export default app;
