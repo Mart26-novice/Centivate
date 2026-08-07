@@ -156,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={() => setActiveTab('admin')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all relative whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
               activeTab === 'admin'
                 ? 'bg-amber-400 text-blue-950 shadow'
                 : 'text-blue-100 hover:text-white hover:bg-blue-900/60'
@@ -164,16 +164,6 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <LayoutDashboard className="w-4 h-4" />
             <span>Admin Dashboard</span>
-            {pendingCount > 0 && (
-              <span className="bg-amber-500 text-blue-950 text-[10px] font-black px-1.5 py-0.2 rounded-full border border-blue-900">
-                {pendingCount}
-              </span>
-            )}
-            {urgentCount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full animate-pulse">
-                {urgentCount}
-              </span>
-            )}
           </button>
 
           <button
