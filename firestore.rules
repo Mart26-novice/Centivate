@@ -1,8 +1,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function hasRequiredKeys(data, keys) {
+      return data.keys().hasAll(keys);
+    }
+
+    // Complaints collection
+    match /complaints/{complaintId} {
+      // Allow public reads so students/guests can look up complaint tracking status (CMP-YYYY-XXXX)
+      allow read: if true;
+
+      // Allow creating a complaint if required fields are present and valid
+      allow create: if isValidId(complaintId)
+                    && hasRequiredKeys(request.resource.data, ['trackingCode', 'title', 'description', 'category', 'status'])
+                    && request.resource.data.trackingCode is string
+                    && request.resource.data.title is string && request.resource.data.title.size() <= 200
+                    && request.resource.data.description is string && request.resource.data.description.size() <= 5000;
+
+      // Allow authenticated staff/admins or users to update and resolve complaints
+      allow update: if isSignedIn() || request.auth != null;
+
+      // Restrict deletion to authenticated users
+      allow delete: if isSignedIn();
+    }
+
+    // Official Student Directory collection
+    match /students/{studentId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Maintenance Staff Directory collection
+    match /staff/{staffId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Survey Responses collection
+    match /surveys/{surveyId} {
+      allow read: if true;
+      allow create: if isValidId(surveyId)
+                    && hasRequiredKeys(request.resource.data, ['role', 'submittedAt'])
+                    && request.resource.data.role is string;
+      allow update, delete: if isSignedIn();
+    }
+
+    // Default catch-all rule: reject all unhandled collections
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -14,9 +14,12 @@ import {
   BookOpen,
   Search,
   LogIn,
+  Loader2,
 } from 'lucide-react';
 import { UserRole, UserSession } from '../types';
 import { PRESET_USERS } from '../data/authData';
+import { auth } from '../lib/firebase';
+import { signInAnonymously } from 'firebase/auth';
 import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
 
 interface LoginModalProps {
@@ -43,6 +46,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   );
   const [password, setPassword] = useState<string>('password123');
   const [rememberMe, setRememberMe] = useState<boolean>(true);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
   if (!isOpen) return null;
@@ -64,33 +68,81 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setPassword('password123');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !email.trim()) {
+    setError('');
+
+    const trimmedUser = username.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPass = password.trim();
+
+    if (!trimmedUser || !trimmedEmail) {
       setError('Please provide username and email credentials.');
       return;
     }
 
-    const newUser: UserSession = {
-      id: `USR-${Date.now()}`,
-      username: username.trim(),
-      email: email.trim(),
-      role: role,
-      fullName:
-        role === 'admin'
-          ? username.toLowerCase() === 'admin'
-            ? PRESET_USERS.admin.fullName
-            : username
-          : username.toLowerCase() === 'student'
-          ? PRESET_USERS.student.fullName
-          : username,
-      strandOrDepartment:
-        role === 'admin' ? 'Campus Facilities Office' : 'Senior High School Student',
-    };
+    if (!trimmedEmail.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
 
-    onLoginSuccess(newUser);
-    onClose();
+    if (!trimmedPass) {
+      setError('Password is required.');
+      return;
+    }
+
+    // Strict Password & Credentials Verification
+    if (role === 'admin') {
+      const isValidAdminPass = trimmedPass === 'password123' || trimmedPass === 'admin123' || trimmedPass === 'cpuAdmin2026';
+      if (!isValidAdminPass) {
+        setError('Invalid admin security password. (Demo Admin Password: password123)');
+        return;
+      }
+    } else {
+      const isValidStudentPass = trimmedPass === 'password123' || trimmedPass === 'student123' || trimmedPass === 'cpuStudent2026';
+      if (!isValidStudentPass) {
+        setError('Invalid student security password. (Demo Student Password: password123)');
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Authenticate with Firebase Auth so Firestore operations carry valid request.auth token
+      if (auth) {
+        await signInAnonymously(auth).catch((authErr) => {
+          console.warn('Firebase anonymous Auth fallback notice:', authErr);
+        });
+      }
+
+      const newUser: UserSession = {
+        id: `USR-${Date.now()}`,
+        username: trimmedUser,
+        email: trimmedEmail,
+        role: role,
+        fullName:
+          role === 'admin'
+            ? trimmedUser.toLowerCase() === 'admin'
+              ? PRESET_USERS.admin.fullName
+              : trimmedUser
+            : trimmedUser.toLowerCase() === 'student'
+            ? PRESET_USERS.student.fullName
+            : trimmedUser,
+        strandOrDepartment:
+          role === 'admin' ? 'Campus Facilities Office' : 'Senior High School Student',
+      };
+
+      onLoginSuccess(newUser);
+      onClose();
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Authentication failed. Please verify your credentials and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
@@ -314,10 +366,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
               <button
                 type="submit"
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-950 hover:to-indigo-950 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border-b-4 border-amber-400 flex items-center justify-center gap-2 transform active:scale-95 transition-all mt-2"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-950 hover:to-indigo-950 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg border-b-4 border-amber-400 flex items-center justify-center gap-2 transform active:scale-95 transition-all mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>Authorize & Enter Portal</span>
-                <ArrowRight className="w-4 h-4 text-amber-400" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+                    <span>Authenticating...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Authorize & Enter Portal</span>
+                    <ArrowRight className="w-4 h-4 text-amber-400" />
+                  </>
+                )}
               </button>
             </form>
           </div>
