@@ -335,6 +335,7 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                   <img
                     src={complaint.photoUrl}
                     alt="Complaint photo"
+                    referrerPolicy="no-referrer"
                     className="w-full h-48 object-cover rounded-xl border border-slate-300 shadow-sm"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';

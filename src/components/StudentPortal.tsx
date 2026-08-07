@@ -491,6 +491,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <img
                     src={photoUrl}
                     alt="Attached evidence"
+                    referrerPolicy="no-referrer"
                     className="w-28 h-28 object-cover rounded-xl border-2 border-amber-400 shadow-sm"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';

@@ -281,6 +281,7 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
               <img
                 src={complaint.photoUrl}
                 alt="Facility damage"
+                referrerPolicy="no-referrer"
                 className="w-full h-56 object-cover rounded-xl border border-slate-300 shadow-sm"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';

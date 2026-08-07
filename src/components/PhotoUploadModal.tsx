@@ -161,6 +161,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                     <img
                       src={item.url}
                       alt={item.title}
+                      referrerPolicy="no-referrer"
                       className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
                       onError={(e) => {
                         (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
@@ -187,6 +188,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
               <img
                 src={selectedUrl}
                 alt="Selected preview"
+                referrerPolicy="no-referrer"
                 className="w-16 h-16 object-cover rounded-lg border border-slate-300"
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
