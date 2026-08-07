@@ -157,6 +157,9 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                       src={item.url}
                       alt={item.title}
                       className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80';
+                      }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-blue-950/90 via-blue-950/60 to-transparent p-1.5 text-white">
                       <p className="text-[10px] font-bold truncate">{item.title}</p>
@@ -180,6 +183,9 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 src={selectedUrl}
                 alt="Selected preview"
                 className="w-16 h-16 object-cover rounded-lg border border-slate-300"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80';
+                }}
               />
               <div className="flex-1">
                 <p className="text-xs font-bold text-slate-800">Selected Attachment</p>

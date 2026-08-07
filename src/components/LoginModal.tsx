@@ -210,10 +210,22 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {/* Background Image overlay */}
           <div className="absolute inset-0 z-0">
             <img
-              src={campusBg}
+              src={campusBg || '/cpu_campus_aerial.jpg'}
               alt="Central Philippine University Campus"
               className="w-full h-full object-cover opacity-40 mix-blend-overlay scale-105 transition-transform duration-700 hover:scale-100"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                const target = e.currentTarget;
+                if (!target.dataset.triedPublicJpg) {
+                  target.dataset.triedPublicJpg = 'true';
+                  target.src = '/cpu_campus_aerial.jpg';
+                } else if (!target.dataset.triedPublicWebp) {
+                  target.dataset.triedPublicWebp = 'true';
+                  target.src = '/cpu_campus_aerial.webp';
+                } else {
+                  target.src = 'https://images.unsplash.com/photo-1562774053-701939374585?w=1200&auto=format&fit=crop&q=80';
+                }
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/80 to-blue-900/40" />
           </div>

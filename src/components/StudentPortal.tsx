@@ -459,6 +459,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     src={photoUrl}
                     alt="Attached evidence"
                     className="w-28 h-28 object-cover rounded-xl border-2 border-amber-400 shadow-sm"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80';
+                    }}
                   />
                   <button
                     type="button"

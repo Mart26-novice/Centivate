@@ -282,6 +282,9 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
                 src={complaint.photoUrl}
                 alt="Facility damage"
                 className="w-full h-56 object-cover rounded-xl border border-slate-300 shadow-sm"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80';
+                }}
               />
             </div>
           )}
