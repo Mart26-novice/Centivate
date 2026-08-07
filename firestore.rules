@@ -41,42 +41,45 @@ service cloud.firestore {
 
     // Complaints collection
     match /complaints/{complaintId} {
-      // Allow public reads so students/guests can look up complaint tracking status (CMP-YYYY-XXXX)
-      allow read: if true;
+      // Allow single document read (get) for public tracker lookup by tracking code / doc ID, but restrict list queries to authenticated users
+      allow get: if true;
+      allow list: if isEmailAuth();
 
       // Allow creating a complaint if required fields are present and valid
       allow create: if isValidId(complaintId)
                     && hasRequiredKeys(request.resource.data, ['trackingCode', 'title', 'description', 'category', 'status'])
                     && request.resource.data.trackingCode is string
                     && request.resource.data.title is string && request.resource.data.title.size() <= 200
-                    && request.resource.data.description is string && request.resource.data.description.size() <= 5000;
+                    && request.resource.data.description is string && request.resource.data.description.size() <= 5000
+                    && (!('photoUrl' in request.resource.data) || (request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 500000));
 
-      // Allow authenticated real users to update complaints (e.g. status changes, staff dispatch, resolution)
-      allow update: if isEmailAuth();
+      // Allow authenticated staff/admin or email auth users to update complaints with size constraints
+      allow update: if isEmailAuth()
+                    && (!('resolutionPhotoUrl' in request.resource.data) || (request.resource.data.resolutionPhotoUrl is string && request.resource.data.resolutionPhotoUrl.size() <= 500000));
 
-      // Restrict deletion to authenticated real users
-      allow delete: if isEmailAuth();
+      // Restrict deletion to authenticated admin users
+      allow delete: if isAdmin();
     }
 
     // Official Student Directory collection
     match /students/{studentId} {
-      allow read: if true;
-      allow create, update, delete: if isEmailAuth();
+      allow read: if isEmailAuth();
+      allow create, update, delete: if isAdmin();
     }
 
     // Maintenance Staff Directory collection
     match /staff/{staffId} {
-      allow read: if true;
-      allow create, update, delete: if isEmailAuth();
+      allow read: if isEmailAuth();
+      allow create, update, delete: if isAdmin();
     }
 
     // Survey Responses collection
     match /surveys/{surveyId} {
-      allow read: if true;
+      allow read: if isEmailAuth();
       allow create: if isValidId(surveyId)
                     && hasRequiredKeys(request.resource.data, ['role', 'submittedAt'])
                     && request.resource.data.role is string;
-      allow update, delete: if isEmailAuth();
+      allow update, delete: if isAdmin();
     }
 
     // Default catch-all rule: reject all unhandled collections

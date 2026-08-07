@@ -7,14 +7,17 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../src/lib/firebase';
+import { adminAuth } from '../src/lib/firebase-admin';
 import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData';
 import {
   Complaint,
   ComplaintPriority,
   ComplaintCategory,
   ComplaintStatus,
+  BuildingLocation,
   SurveyResponse,
   StatusLog,
   SystemStats,
@@ -25,6 +28,67 @@ const app = express();
 
 app.use(express.json({ limit: '10mb' }));
 
+// Optional middleware to decode Firebase Authorization token if present
+app.use(async (req, _res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split('Bearer ')[1];
+    try {
+      if (adminAuth) {
+        const decoded = await adminAuth.verifyIdToken(token);
+        (req as any).user = decoded;
+      }
+    } catch (err) {
+      // Non-blocking warning for optional auth tokens
+    }
+  }
+  next();
+});
+
+// Server-side authorization check middleware for sensitive mutation endpoints
+async function requireAuthOrAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if ((req as any).user) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split('Bearer ')[1];
+    try {
+      if (adminAuth) {
+        const decoded = await adminAuth.verifyIdToken(token);
+        (req as any).user = decoded;
+        return next();
+      }
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired Firebase authentication token.' });
+    }
+  }
+
+  const adminSessionHeader = req.headers['x-admin-authorization'];
+  if (adminSessionHeader === 'cpu-admin-session-2026') {
+    return next();
+  }
+
+  return res.status(401).json({ error: 'Unauthorized access. Authentication credentials required.' });
+}
+
+// Server-side image MIME type and payload size validator
+function isValidImagePayload(urlOrBase64: string): boolean {
+  if (!urlOrBase64 || typeof urlOrBase64 !== 'string') return true;
+  if (urlOrBase64.length > 500000) return false;
+  if (urlOrBase64.startsWith('data:')) {
+    return (
+      urlOrBase64.startsWith('data:image/jpeg') ||
+      urlOrBase64.startsWith('data:image/jpg') ||
+      urlOrBase64.startsWith('data:image/png') ||
+      urlOrBase64.startsWith('data:image/webp') ||
+      urlOrBase64.startsWith('data:image/gif')
+    );
+  }
+  return true;
+}
+
 const COMPLAINTS_COL = 'complaints';
 const SURVEYS_COL = 'surveys';
 const STAFF_COL = 'staff';
@@ -32,11 +96,14 @@ const STAFF_COL = 'staff';
 // Helper to retrieve complaints from Firestore (seeding if empty)
 async function getComplaintsFromFirestore(): Promise<Complaint[]> {
   try {
-    const snapshot = await getDocs(collection(db, COMPLAINTS_COL));
+    const colRef = collection(db, COMPLAINTS_COL);
+    const snapshot = await getDocs(colRef);
     if (snapshot.empty) {
+      const batch = writeBatch(db);
       for (const item of INITIAL_COMPLAINTS) {
-        await setDoc(doc(db, COMPLAINTS_COL, item.id), item);
+        batch.set(doc(db, COMPLAINTS_COL, item.id), item);
       }
+      await batch.commit();
       return JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
     }
     const items: Complaint[] = [];
@@ -54,11 +121,14 @@ async function getComplaintsFromFirestore(): Promise<Complaint[]> {
 // Helper to retrieve surveys from Firestore (seeding if empty)
 async function getSurveysFromFirestore(): Promise<SurveyResponse[]> {
   try {
-    const snapshot = await getDocs(collection(db, SURVEYS_COL));
+    const colRef = collection(db, SURVEYS_COL);
+    const snapshot = await getDocs(colRef);
     if (snapshot.empty) {
+      const batch = writeBatch(db);
       for (const item of INITIAL_SURVEYS) {
-        await setDoc(doc(db, SURVEYS_COL, item.id), item);
+        batch.set(doc(db, SURVEYS_COL, item.id), item);
       }
+      await batch.commit();
       return JSON.parse(JSON.stringify(INITIAL_SURVEYS));
     }
     const items: SurveyResponse[] = [];
@@ -75,11 +145,14 @@ async function getSurveysFromFirestore(): Promise<SurveyResponse[]> {
 // Helper to retrieve staff from Firestore (seeding if empty)
 async function getStaffFromFirestore(): Promise<MaintenanceStaff[]> {
   try {
-    const snapshot = await getDocs(collection(db, STAFF_COL));
+    const colRef = collection(db, STAFF_COL);
+    const snapshot = await getDocs(colRef);
     if (snapshot.empty) {
+      const batch = writeBatch(db);
       for (const item of INITIAL_STAFF) {
-        await setDoc(doc(db, STAFF_COL, item.id), item);
+        batch.set(doc(db, STAFF_COL, item.id), item);
       }
+      await batch.commit();
       return JSON.parse(JSON.stringify(INITIAL_STAFF));
     }
     const items: MaintenanceStaff[] = [];
@@ -110,8 +183,24 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 function generateTrackingCode(): string {
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `CENT-2026-${randomNum}`;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let randomStr = '';
+  for (let i = 0; i < 6; i++) {
+    randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `CENT-2026-${randomStr}`;
+}
+
+async function generateUniqueTrackingCode(): Promise<string> {
+  const existingComplaints = await getComplaintsFromFirestore();
+  const existingCodes = new Set(existingComplaints.map((c) => c.trackingCode.toUpperCase()));
+  let code = generateTrackingCode();
+  let attempts = 0;
+  while (existingCodes.has(code.toUpperCase()) && attempts < 20) {
+    code = generateTrackingCode();
+    attempts++;
+  }
+  return code;
 }
 
 // --- API ENDPOINTS ---
@@ -210,11 +299,44 @@ app.post('/api/complaints', async (req, res) => {
       contactEmail,
     } = req.body;
 
-    if (!title || !description || !category || !locationBuilding || !locationRoom) {
-      return res.status(400).json({ error: 'Please provide all required fields (title, description, category, building, room).' });
+    // Server-side strict type and presence checks
+    if (!title || typeof title !== 'string' || title.trim().length < 3 || title.trim().length > 200) {
+      return res.status(400).json({ error: 'Title is required and must be between 3 and 200 characters.' });
     }
 
-    const trackingCode = generateTrackingCode();
+    if (!description || typeof description !== 'string' || description.trim().length < 10 || description.trim().length > 5000) {
+      return res.status(400).json({ error: 'Description is required and must be between 10 and 5000 characters.' });
+    }
+
+    if (!category || typeof category !== 'string' || !category.trim()) {
+      return res.status(400).json({ error: 'Category is required.' });
+    }
+
+    if (!locationBuilding || typeof locationBuilding !== 'string' || locationBuilding.trim().length > 100) {
+      return res.status(400).json({ error: 'Building location is required and must be under 100 characters.' });
+    }
+
+    if (!locationRoom || typeof locationRoom !== 'string' || locationRoom.trim().length > 100) {
+      return res.status(400).json({ error: 'Room/Area is required and must be under 100 characters.' });
+    }
+
+    if (contactEmail && typeof contactEmail === 'string' && contactEmail.trim().length > 0) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(contactEmail.trim()) || contactEmail.length > 150) {
+        return res.status(400).json({ error: 'Provided contact email address is invalid.' });
+      }
+    }
+
+    // Image payload size & MIME type validation
+    if (photoUrl && typeof photoUrl === 'string') {
+      if (!isValidImagePayload(photoUrl)) {
+        return res.status(400).json({
+          error: 'Uploaded photo must be a valid JPEG, PNG, or WEBP image under 500KB.',
+        });
+      }
+    }
+
+    const trackingCode = await generateUniqueTrackingCode();
     const now = new Date().toISOString();
 
     const initialLog: StatusLog = {
@@ -231,7 +353,7 @@ app.post('/api/complaints', async (req, res) => {
       title,
       description,
       category: category as ComplaintCategory,
-      locationBuilding,
+      locationBuilding: locationBuilding as BuildingLocation,
       locationRoom,
       priority: (priority || 'Medium') as ComplaintPriority,
       status: 'Filed',
@@ -302,8 +424,11 @@ Provide a short urgency reason, a recommended maintenance action plan, and wheth
 
     try {
       await setDoc(doc(db, COMPLAINTS_COL, newComplaint.id), newComplaint);
-    } catch (dbErr) {
+    } catch (dbErr: any) {
       console.error('Failed to save complaint to Firestore:', dbErr);
+      return res.status(500).json({
+        error: `Database write failed: ${dbErr?.message || 'Unable to persist complaint'}`,
+      });
     }
 
     res.status(201).json(newComplaint);
@@ -313,7 +438,7 @@ Provide a short urgency reason, a recommended maintenance action plan, and wheth
 });
 
 // 5. Update complaint status / details in Firestore
-app.patch('/api/complaints/:id', async (req, res) => {
+app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
   const { id } = req.params;
   const {
     status,
@@ -326,6 +451,14 @@ app.patch('/api/complaints/:id', async (req, res) => {
     updatedBy,
     isArchived,
   } = req.body;
+
+  if (resolutionPhotoUrl && typeof resolutionPhotoUrl === 'string') {
+    if (!isValidImagePayload(resolutionPhotoUrl)) {
+      return res.status(400).json({
+        error: 'Resolution photo must be a valid JPEG, PNG, or WEBP image under 500KB.',
+      });
+    }
+  }
 
   try {
     const docRef = doc(db, COMPLAINTS_COL, id);
@@ -370,7 +503,14 @@ app.patch('/api/complaints/:id', async (req, res) => {
 
     item.updatedAt = now;
 
-    await setDoc(docRef, item);
+    try {
+      await setDoc(docRef, item);
+    } catch (dbErr: any) {
+      console.error('Failed to update complaint in Firestore:', dbErr);
+      return res.status(500).json({
+        error: `Database update failed: ${dbErr?.message || 'Unable to update complaint'}`,
+      });
+    }
 
     res.json(item);
   } catch (err: any) {
@@ -379,7 +519,7 @@ app.patch('/api/complaints/:id', async (req, res) => {
 });
 
 // 6. Delete or Archive in Firestore
-app.delete('/api/complaints/:id', async (req, res) => {
+app.delete('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     const docRef = doc(db, COMPLAINTS_COL, id);
@@ -393,7 +533,14 @@ app.delete('/api/complaints/:id', async (req, res) => {
     item.isArchived = true;
     item.updatedAt = new Date().toISOString();
 
-    await setDoc(docRef, item);
+    try {
+      await setDoc(docRef, item);
+    } catch (dbErr: any) {
+      console.error('Failed to archive complaint in Firestore:', dbErr);
+      return res.status(500).json({
+        error: `Database archive failed: ${dbErr?.message || 'Unable to archive complaint'}`,
+      });
+    }
 
     res.json({ message: 'Complaint archived successfully', id });
   } catch (err: any) {
@@ -559,8 +706,11 @@ app.post('/api/surveys', async (req, res) => {
 
   try {
     await setDoc(doc(db, SURVEYS_COL, newSurvey.id), newSurvey);
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to save survey to Firestore:', err);
+    return res.status(500).json({
+      error: `Database write failed: ${err?.message || 'Unable to store survey'}`,
+    });
   }
 
   res.status(201).json(newSurvey);
@@ -588,7 +738,7 @@ app.get('/api/staff', async (_req, res) => {
   res.json(activeStaffList);
 });
 
-app.post('/api/staff', async (req, res) => {
+app.post('/api/staff', requireAuthOrAdmin, async (req, res) => {
   const { name, role, specialty, phone } = req.body;
   if (!name || !role || !specialty) {
     return res.status(400).json({ error: 'Name, role, and specialty are required.' });
@@ -605,14 +755,17 @@ app.post('/api/staff', async (req, res) => {
 
   try {
     await setDoc(doc(db, STAFF_COL, newStaff.id), newStaff);
-  } catch (err) {
+  } catch (err: any) {
     console.error('Failed to save staff to Firestore:', err);
+    return res.status(500).json({
+      error: `Database write failed: ${err?.message || 'Unable to store staff record'}`,
+    });
   }
 
   res.status(201).json(newStaff);
 });
 
-app.patch('/api/staff/:id', async (req, res) => {
+app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, role, specialty, phone } = req.body;
 
@@ -646,7 +799,14 @@ app.patch('/api/staff/:id', async (req, res) => {
       phone: phone !== undefined ? phone.trim() : currentStaff.phone,
     };
 
-    await setDoc(docRef, updatedStaff);
+    try {
+      await setDoc(docRef, updatedStaff);
+    } catch (err: any) {
+      console.error('Failed to update staff in Firestore:', err);
+      return res.status(500).json({
+        error: `Database update failed: ${err?.message || 'Unable to update staff record'}`,
+      });
+    }
 
     res.json(updatedStaff);
   } catch (err: any) {
@@ -654,7 +814,7 @@ app.patch('/api/staff/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/staff/:id', async (req, res) => {
+app.delete('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -666,7 +826,14 @@ app.delete('/api/staff/:id', async (req, res) => {
     }
 
     const removed = docSnap.data() as MaintenanceStaff;
-    await deleteDoc(docRef);
+    try {
+      await deleteDoc(docRef);
+    } catch (err: any) {
+      console.error('Failed to delete staff member from Firestore:', err);
+      return res.status(500).json({
+        error: `Database delete failed: ${err?.message || 'Unable to delete staff record'}`,
+      });
+    }
 
     const complaints = await getComplaintsFromFirestore();
     for (const c of complaints) {

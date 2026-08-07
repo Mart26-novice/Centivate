@@ -63,13 +63,17 @@ export function computeStatsFromComplaints(
 }
 
 /**
- * Generates a standard tracking code for new complaints.
- * Format: CMP-YYYY-XXXX
+ * Generates a standard tracking code for new complaints with high entropy.
+ * Format: CENT-YYYY-XXXXXX
  */
 export function generateTrackingCode(): string {
   const year = new Date().getFullYear();
-  const randomHex = Math.floor(1000 + Math.random() * 9000);
-  return `CMP-${year}-${randomHex}`;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let randomStr = '';
+  for (let i = 0; i < 6; i++) {
+    randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `CENT-${year}-${randomStr}`;
 }
 
 /**

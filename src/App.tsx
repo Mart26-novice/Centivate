@@ -60,6 +60,45 @@ export default function App() {
   const [trackerCode, setTrackerCode] = useState<string>('');
   const [isResearchModalOpen, setIsResearchModalOpen] = useState<boolean>(false);
 
+  // URL Hash Routing Sync
+  useEffect(() => {
+    const parseHashRoute = () => {
+      const hash = window.location.hash.toLowerCase().replace('#', '');
+      if (!hash || hash === 'home') {
+        setActiveTab('home');
+      } else if (hash === 'student') {
+        setActiveTab('student');
+      } else if (hash === 'admin') {
+        setActiveTab('admin');
+      } else if (hash === 'analytics') {
+        setActiveTab('analytics');
+      } else if (hash.startsWith('tracker')) {
+        const parts = hash.split('=');
+        if (parts[1]) {
+          setTrackerCode(parts[1].toUpperCase());
+        }
+        setIsTrackerOpen(true);
+      } else if (hash === 'research') {
+        setIsResearchModalOpen(true);
+      }
+    };
+
+    parseHashRoute();
+
+    const handleHashChange = () => {
+      parseHashRoute();
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const updateRouteHash = (route: string) => {
+    if (window.location.hash !== `#${route}`) {
+      window.history.pushState(null, '', `#${route}`);
+    }
+  };
+
   // Real-time Firestore sync on mount
   useEffect(() => {
     // 1. Subscribe to complaints in Firestore
@@ -309,6 +348,7 @@ export default function App() {
   const handleOpenTracker = (code?: string) => {
     setTrackerCode(code || '');
     setIsTrackerOpen(true);
+    updateRouteHash(code ? `tracker=${code}` : 'tracker');
   };
 
   const handleOpenLogin = (role?: UserRole) => {
@@ -319,11 +359,13 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setActiveTab('home');
+    updateRouteHash('home');
   };
 
   const handleTabChange = (tab: 'home' | 'student' | 'admin' | 'analytics' | 'research') => {
     if (tab === 'research') {
       setIsResearchModalOpen(true);
+      updateRouteHash('research');
       return;
     }
 
@@ -334,6 +376,7 @@ export default function App() {
       }
       if (currentUser.role !== 'student') {
         setActiveTab('student');
+        updateRouteHash('student');
         return;
       }
     }
@@ -345,11 +388,13 @@ export default function App() {
       }
       if (currentUser.role !== 'admin') {
         setActiveTab('admin');
+        updateRouteHash('admin');
         return;
       }
     }
 
     setActiveTab(tab);
+    updateRouteHash(tab);
   };
 
   const pendingCount = useMemo(

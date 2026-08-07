@@ -11,9 +11,9 @@ import { Complaint } from '../types';
 
 describe('Unit Tests: Complaint Helper Utilities', () => {
   describe('generateTrackingCode()', () => {
-    it('should generate a tracking code starting with CMP-', () => {
+    it('should generate a tracking code starting with CENT-', () => {
       const code = generateTrackingCode();
-      expect(code).toMatch(/^CMP-\d{4}-\d{4}$/);
+      expect(code).toMatch(/^CENT-\d{4}-[A-Z0-9]{6}$/);
     });
 
     it('should generate unique tracking codes on consecutive calls', () => {

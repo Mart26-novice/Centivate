@@ -98,6 +98,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         setError('Invalid admin security credentials or password.');
         return;
       }
+      const isAuthorizedAdminEmail =
+        trimmedEmail.toLowerCase() === 'admin.facilities@cpu.edu.ph' ||
+        trimmedEmail.toLowerCase() === 'admin@cpu.edu.ph' ||
+        trimmedEmail.toLowerCase() === 'admin.demo@cpu.edu.ph' ||
+        trimmedEmail.toLowerCase().startsWith('admin');
+      if (!isAuthorizedAdminEmail) {
+        setError('Admin maintenance access requires an authorized Facilities Office admin account.');
+        return;
+      }
     } else {
       const isValidStudentPass = trimmedPass === 'password123' || trimmedPass === 'student123' || trimmedPass === 'cpuStudent2026';
       if (!isValidStudentPass) {
