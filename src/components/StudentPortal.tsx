@@ -22,6 +22,7 @@ import {
 import { Complaint, ComplaintCategory, BuildingLocation, ComplaintPriority, UserSession } from '../types';
 import { PRESET_STUDENTS } from '../data/authData';
 import { PhotoUploadModal } from './PhotoUploadModal';
+import campusBg from '../assets/images/cpu_campus_aerial.jpg';
 
 interface StudentPortalProps {
   complaints: Complaint[];
@@ -212,7 +213,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         {/* Background Campus Image */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img
-            src="/cpu_campus_aerial.jpg"
+            src={campusBg}
             alt="CPU Campus"
             className="w-full h-full object-cover opacity-35"
             referrerPolicy="no-referrer"
@@ -494,7 +495,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     referrerPolicy="no-referrer"
                     className="w-28 h-28 object-cover rounded-xl border-2 border-amber-400 shadow-sm"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
+                      (e.currentTarget as HTMLImageElement).src = campusBg;
                     }}
                   />
                   <button

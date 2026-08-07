@@ -44,15 +44,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Background Image overlay */}
         <div className="absolute inset-0 z-0">
           <img
-            src={campusBg || '/cpu_campus_aerial.jpg'}
+            src={campusBg}
             alt="Central Philippine University Aerial Campus View"
             className="w-full h-full object-cover opacity-80 scale-100 hover:scale-105 transition-transform duration-1000"
             referrerPolicy="no-referrer"
             onError={(e) => {
-              const target = e.currentTarget;
-              if (!target.src.endsWith('/cpu_campus_aerial.jpg')) {
-                target.src = '/cpu_campus_aerial.jpg';
-              }
+              e.currentTarget.src = campusBg;
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/65 to-blue-900/35" />

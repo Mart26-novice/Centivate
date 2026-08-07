@@ -18,6 +18,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { Complaint, ComplaintStatus, ComplaintPriority, MaintenanceStaff } from '../types';
+import campusBg from '../assets/images/cpu_campus_aerial.jpg';
 
 interface ComplaintDetailsModalProps {
   isOpen: boolean;
@@ -284,7 +285,7 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
                 referrerPolicy="no-referrer"
                 className="w-full h-56 object-cover rounded-xl border border-slate-300 shadow-sm"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
+                  (e.currentTarget as HTMLImageElement).src = campusBg;
                 }}
               />
             </div>
