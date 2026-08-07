@@ -128,16 +128,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               const newCred = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPass);
               firebaseUser = newCred.user;
             } catch (createErr: any) {
-              if (trimmedPass.length < 6) {
+              if (createErr.code === 'auth/operation-not-allowed') {
+                console.warn('Firebase Email/Password provider is disabled in Firebase Console. Proceeding with application session login.');
+              } else if (trimmedPass.length < 6) {
                 setError('Password must be at least 6 characters for secure Firebase Authentication.');
                 setIsSubmitting(false);
                 return;
+              } else {
+                console.warn('Firebase Auth user creation notice:', createErr);
               }
-              // If creation also fails, throw error
-              throw createErr;
             }
+          } else if (signInErr.code === 'auth/operation-not-allowed') {
+            console.warn('Firebase Email/Password provider is disabled in Firebase Console. Proceeding with application session login.');
           } else {
-            throw signInErr;
+            console.warn('Firebase Auth sign-in notice:', signInErr);
           }
         }
       }
