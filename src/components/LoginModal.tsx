@@ -17,7 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { UserRole, UserSession } from '../types';
-import { PRESET_USERS } from '../data/authData';
+import { PRESET_USERS, PRESET_STUDENTS } from '../data/authData';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
@@ -131,8 +131,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         }
       }
 
+      const matchingStudent = PRESET_STUDENTS.find(
+        (s) => s.email.toLowerCase() === trimmedEmail.toLowerCase() || s.username.toLowerCase() === trimmedUser.toLowerCase()
+      );
+
       const newUser: UserSession = {
-        id: firebaseUser ? firebaseUser.uid : `USR-${Date.now()}`,
+        id: firebaseUser ? firebaseUser.uid : matchingStudent ? matchingStudent.id : `USR-${Date.now()}`,
         username: trimmedUser,
         email: trimmedEmail,
         role: role,
@@ -141,11 +145,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             ? trimmedUser.toLowerCase() === 'admin'
               ? PRESET_USERS.admin.fullName
               : trimmedUser
+            : matchingStudent
+            ? matchingStudent.fullName
             : trimmedUser.toLowerCase() === 'student'
             ? PRESET_USERS.student.fullName
             : trimmedUser,
         strandOrDepartment:
-          role === 'admin' ? 'Campus Facilities Office' : 'Senior High School Student',
+          role === 'admin'
+            ? 'Campus Facilities Office'
+            : matchingStudent?.strandOrDepartment || 'Senior High School Student',
       };
 
       onLoginSuccess(newUser);
@@ -273,40 +281,56 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
 
             {/* Quick Demo Credential Fillers */}
-            <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs space-y-1.5">
+            <div className="mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs space-y-2">
               <div className="flex items-center justify-between font-bold text-amber-900 text-[11px] uppercase tracking-wider">
                 <span className="flex items-center gap-1">
                   <KeyRound className="w-3.5 h-3.5 text-amber-600" />
-                  Quick Demo Credentials
+                  Select Demo Account
                 </span>
                 <span className="text-amber-700 font-normal">Click to auto-fill</span>
               </div>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo('student')}
-                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-semibold transition-colors flex items-center gap-1 ${
-                    role === 'student'
-                      ? 'bg-amber-500 text-blue-950 border-amber-600 font-bold'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-100'
-                  }`}
-                >
-                  <GraduationCap className="w-3 h-3" />
-                  <span>Student Demo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillDemo('admin')}
-                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-semibold transition-colors flex items-center gap-1 ${
-                    role === 'admin'
-                      ? 'bg-amber-500 text-blue-950 border-amber-600 font-bold'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-100'
-                  }`}
-                >
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Admin Demo</span>
-                </button>
-              </div>
+
+              {role === 'student' ? (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-slate-600 block uppercase tracking-wider">
+                    Official Student Roster:
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {PRESET_STUDENTS.map((stu) => (
+                      <button
+                        key={stu.id}
+                        type="button"
+                        onClick={() => {
+                          setRole('student');
+                          setUsername(stu.username);
+                          setEmail(stu.email);
+                          setPassword('password123');
+                          setError('');
+                        }}
+                        className={`text-[11px] p-2 rounded-lg border text-left transition-all ${
+                          email === stu.email
+                            ? 'bg-amber-400 text-blue-950 border-amber-600 font-black shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-amber-100 hover:border-amber-300'
+                        }`}
+                      >
+                        <div className="font-bold truncate">{stu.fullName}</div>
+                        <div className="text-[9px] opacity-80 truncate">{stu.strandOrDepartment}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleFillDemo('admin')}
+                    className="text-[11px] px-3 py-1.5 rounded-lg border font-bold bg-amber-500 text-blue-950 border-amber-600 flex items-center gap-1 shadow-sm"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Engr. Roberto Santos (Facilities Admin)</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {error && (

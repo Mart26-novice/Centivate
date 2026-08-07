@@ -20,6 +20,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { Complaint, ComplaintCategory, BuildingLocation, ComplaintPriority, UserSession } from '../types';
+import { PRESET_STUDENTS } from '../data/authData';
 import { PhotoUploadModal } from './PhotoUploadModal';
 
 interface StudentPortalProps {
@@ -83,6 +84,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [contactEmail, setContactEmail] = useState(currentUser?.email || 'student.shs@cpu.edu.ph');
 
+  React.useEffect(() => {
+    if (currentUser) {
+      setStudentName(currentUser.fullName || '');
+      setStudentStrand(currentUser.strandOrDepartment || 'STEM 12-A');
+      setContactEmail(currentUser.email || '');
+    }
+  }, [currentUser]);
+
   // UI state
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -91,8 +100,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const [successComplaint, setSuccessComplaint] = useState<Complaint | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Search in student list
+  // Search and account filtering in student list
   const [searchQuery, setSearchQuery] = useState('');
+  const [accountFilter, setAccountFilter] = useState<string>('current');
 
   const handleAiPreCheck = async () => {
     if (!description.trim()) {
@@ -175,7 +185,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const filteredComplaints = complaints.filter(
+  const activeStudentEmail = accountFilter === 'current'
+    ? (currentUser?.email || contactEmail).toLowerCase()
+    : accountFilter.toLowerCase();
+  const activeStudentName = currentUser?.fullName || studentName;
+
+  const myStudentComplaints = complaints.filter((c) => {
+    if (accountFilter === 'all') return true;
+    const emailMatch = Boolean(c.contactEmail && c.contactEmail.toLowerCase() === activeStudentEmail);
+    const nameMatch = Boolean(c.studentName && activeStudentName && c.studentName.toLowerCase() === activeStudentName.toLowerCase());
+    return emailMatch || nameMatch;
+  });
+
+  const filteredComplaints = myStudentComplaints.filter(
     (c) =>
       c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.trackingCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -222,7 +244,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             }`}
           >
             <ClipboardList className="w-4 h-4" />
-            <span>Submitted Complaints ({complaints.length})</span>
+            <span>Submitted Complaints ({myStudentComplaints.length})</span>
           </button>
         </div>
       </div>
@@ -618,23 +640,51 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       {/* LIST TAB: MY SUBMITTED COMPLAINTS */}
       {activeTab === 'list' && (
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <h3 className="text-lg font-black text-blue-950">Campus Complaints Register</h3>
-              <p className="text-xs text-slate-500">
-                Track status updates and technician logs for all submitted facility reports.
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg font-black text-blue-950">Student Complaints Register</h3>
+                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  {accountFilter === 'all' ? 'All Complaints Mode' : 'Personal Account'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Displaying facility reports filed specifically under this student account.
               </p>
             </div>
 
-            <div className="relative w-full sm:w-64">
-              <input
-                type="text"
-                placeholder="Search code, location, title..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-400 focus:outline-none"
-              />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+              {/* Account Filter Selector */}
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs">
+                <UserCheck className="w-4 h-4 text-blue-900 shrink-0" />
+                <span className="font-bold text-slate-600 shrink-0">Portal Account:</span>
+                <select
+                  value={accountFilter}
+                  onChange={(e) => setAccountFilter(e.target.value)}
+                  className="bg-transparent font-extrabold text-blue-950 focus:outline-none text-xs cursor-pointer max-w-[200px] truncate"
+                >
+                  <option value="current">
+                    {currentUser ? `${currentUser.fullName} (${currentUser.email})` : 'My Current Student Account'}
+                  </option>
+                  {PRESET_STUDENTS.map((s) => (
+                    <option key={s.id} value={s.email}>
+                      {s.fullName} ({s.strandOrDepartment})
+                    </option>
+                  ))}
+                  <option value="all">-- Show All Complaints (Admin View) --</option>
+                </select>
+              </div>
+
+              <div className="relative w-full sm:w-56">
+                <input
+                  type="text"
+                  placeholder="Search code, location, title..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              </div>
             </div>
           </div>
 
