@@ -27,6 +27,7 @@ const LoadingFallback = () => (
 );
 import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole, OfficialStudent } from './types';
 import { INITIAL_COMPLAINTS, INITIAL_STAFF, INITIAL_STUDENTS } from './data/initialData';
+import { computeStatsFromComplaints } from './utils/complaintHelpers';
 import { PRESET_USERS } from './data/authData';
 import {
   subscribeToComplaints,
@@ -64,6 +65,7 @@ export default function App() {
     // 1. Subscribe to complaints in Firestore
     const unsubscribeComplaints = subscribeToComplaints((liveComplaints) => {
       setComplaints(liveComplaints);
+      setStats((prevStats) => computeStatsFromComplaints(liveComplaints, prevStats));
     });
 
     // 2. Subscribe to official students in Firestore
@@ -78,7 +80,7 @@ export default function App() {
 
     // 4. Subscribe to surveys in Firestore (auto-seeds surveys collection if empty)
     const unsubscribeSurveys = subscribeToSurveys(() => {
-      // surveys seeded and synchronized in Firestore
+      fetchStats();
     });
 
     fetchStats();
@@ -97,9 +99,12 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setStats(data);
+      } else {
+        setStats((prev) => computeStatsFromComplaints(complaints, prev));
       }
     } catch (err) {
-      console.warn('Stats fetch failed:', err);
+      console.warn('Stats fetch failed, using live client computed stats:', err);
+      setStats((prev) => computeStatsFromComplaints(complaints, prev));
     }
   };
 

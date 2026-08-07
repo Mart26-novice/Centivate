@@ -8,8 +8,8 @@ import {
   setDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { db } from '../src/lib/firebase.ts';
-import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData.ts';
+import { db } from '../src/lib/firebase';
+import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData';
 import {
   Complaint,
   ComplaintPriority,
@@ -19,7 +19,7 @@ import {
   StatusLog,
   SystemStats,
   MaintenanceStaff,
-} from '../src/types.ts';
+} from '../src/types';
 
 const app = express();
 

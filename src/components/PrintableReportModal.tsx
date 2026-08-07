@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Printer, X, Download, GraduationCap, CheckCircle2, FileText, Award, ExternalLink } from 'lucide-react';
 import { SystemStats, Complaint } from '../types';
+import { computeStatsFromComplaints } from '../utils/complaintHelpers';
 
 interface PrintableReportModalProps {
   isOpen: boolean;
@@ -12,12 +13,25 @@ interface PrintableReportModalProps {
 export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
   isOpen,
   onClose,
-  stats,
+  stats: propsStats,
   complaints,
 }) => {
+  const effectiveStats = useMemo(() => {
+    if (
+      propsStats &&
+      propsStats.categoryBreakdown &&
+      Object.keys(propsStats.categoryBreakdown).length > 0 &&
+      propsStats.buildingBreakdown &&
+      Object.keys(propsStats.buildingBreakdown).length > 0
+    ) {
+      return propsStats;
+    }
+    return computeStatsFromComplaints(complaints, propsStats);
+  }, [propsStats, complaints]);
+
   if (!isOpen) return null;
 
-  const total = stats?.totalComplaints || complaints.length || 1;
+  const total = effectiveStats.totalComplaints || complaints.length || 1;
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -26,7 +40,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
   });
 
   const generateReportHTML = () => {
-    const categoryRows = Object.entries(stats?.categoryBreakdown || {})
+    const categoryRows = Object.entries(effectiveStats.categoryBreakdown || {})
       .map(([cat, count]) => {
         const cnt = Number(count);
         const pct = Math.round((cnt / total) * 100);
@@ -40,7 +54,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
       })
       .join('');
 
-    const buildingRows = Object.entries(stats?.buildingBreakdown || {})
+    const buildingRows = Object.entries(effectiveStats.buildingBreakdown || {})
       .map(([bldg, count]) => {
         const cnt = Number(count);
         const pct = Math.round((cnt / total) * 100);
@@ -116,15 +130,15 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Resolved Issues</div>
-      <span class="kpi-value" style="color: #16a34a;">${stats?.resolvedCount || 0}</span>
+      <span class="kpi-value" style="color: #16a34a;">${effectiveStats?.resolvedCount || 0}</span>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Resolution Efficiency</div>
-      <span class="kpi-value">${Math.round(((stats?.resolvedCount || 1) / total) * 100)}%</span>
+      <span class="kpi-value">${Math.round(((effectiveStats?.resolvedCount || 1) / total) * 100)}%</span>
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Usability Score</div>
-      <span class="kpi-value" style="color: #d97706;">${stats?.avgSatisfactionScore || 4.7} / 5.0</span>
+      <span class="kpi-value" style="color: #d97706;">${effectiveStats?.avgSatisfactionScore || 4.7} / 5.0</span>
     </div>
   </div>
 
@@ -299,17 +313,17 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
               </div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
                 <span className="text-[11px] font-bold text-slate-500 block uppercase">Resolved Issues</span>
-                <span className="text-xl font-black text-emerald-600">{stats?.resolvedCount || 0}</span>
+                <span className="text-xl font-black text-emerald-600">{effectiveStats?.resolvedCount || 0}</span>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
                 <span className="text-[11px] font-bold text-slate-500 block uppercase">Resolution Efficiency</span>
                 <span className="text-xl font-black text-blue-900">
-                  {Math.round(((stats?.resolvedCount || 1) / total) * 100)}%
+                  {Math.round(((effectiveStats?.resolvedCount || 1) / total) * 100)}%
                 </span>
               </div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
                 <span className="text-[11px] font-bold text-slate-500 block uppercase">Usability Score</span>
-                <span className="text-xl font-black text-amber-600">{stats?.avgSatisfactionScore || 4.7} / 5.0</span>
+                <span className="text-xl font-black text-amber-600">{effectiveStats?.avgSatisfactionScore || 4.7} / 5.0</span>
               </div>
             </div>
           </div>
@@ -328,7 +342,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(stats?.categoryBreakdown || {}).map(([cat, count]) => {
+                {Object.entries(effectiveStats?.categoryBreakdown || {}).map(([cat, count]) => {
                   const cnt = Number(count);
                   const pct = Math.round((cnt / total) * 100);
                   return (
@@ -357,7 +371,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(stats?.buildingBreakdown || {}).map(([bldg, count]) => {
+                {Object.entries(effectiveStats?.buildingBreakdown || {}).map(([bldg, count]) => {
                   const cnt = Number(count);
                   const pct = Math.round((cnt / total) * 100);
                   return (

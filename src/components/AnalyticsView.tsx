@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   BarChart3,
   PieChart,
@@ -14,6 +14,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { SystemStats, Complaint } from '../types';
+import { computeStatsFromComplaints } from '../utils/complaintHelpers';
 import { PrintableReportModal } from './PrintableReportModal';
 
 interface AnalyticsViewProps {
@@ -23,27 +24,39 @@ interface AnalyticsViewProps {
 }
 
 export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
-  stats,
+  stats: propsStats,
   complaints,
   onOpenResearchInfo,
 }) => {
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  const categoryCounts = stats?.categoryBreakdown || {};
-  const buildingCounts = stats?.buildingBreakdown || {};
+  const effectiveStats = useMemo(() => {
+    if (
+      propsStats &&
+      propsStats.categoryBreakdown &&
+      Object.keys(propsStats.categoryBreakdown).length > 0 &&
+      propsStats.buildingBreakdown &&
+      Object.keys(propsStats.buildingBreakdown).length > 0
+    ) {
+      return propsStats;
+    }
+    return computeStatsFromComplaints(complaints, propsStats);
+  }, [propsStats, complaints]);
 
-  const total = stats?.totalComplaints || complaints.length || 1;
+  const categoryCounts = effectiveStats.categoryBreakdown;
+  const buildingCounts = effectiveStats.buildingBreakdown;
+  const total = effectiveStats.totalComplaints || complaints.length || 1;
 
   const handleExportCSV = () => {
     const headers = ['Metric', 'Value'];
     const rows = [
       ['Total Complaints', total],
-      ['Pending Complaints', stats?.pendingCount || 0],
-      ['In Progress Complaints', stats?.inProgressCount || 0],
-      ['Resolved Complaints', stats?.resolvedCount || 0],
-      ['Avg Resolution Time (Hours)', stats?.avgResolutionTimeHours || 24],
-      ['System Usability Rating', stats?.avgSatisfactionScore || 4.7],
-      ['Total Survey Evaluators', stats?.surveyCount || 3],
+      ['Pending Complaints', effectiveStats?.pendingCount || 0],
+      ['In Progress Complaints', effectiveStats?.inProgressCount || 0],
+      ['Resolved Complaints', effectiveStats?.resolvedCount || 0],
+      ['Avg Resolution Time (Hours)', effectiveStats?.avgResolutionTimeHours || 24],
+      ['System Usability Rating', effectiveStats?.avgSatisfactionScore || 4.7],
+      ['Total Survey Evaluators', effectiveStats?.surveyCount || 3],
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(',')).join('\n')].join('\n');
@@ -102,9 +115,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <span className="text-amber-400 font-extrabold text-xs uppercase tracking-wider block">
             System Usability Evaluation (SUS)
           </span>
-          <h3 className="text-xl font-black">Overall User Satisfaction Score: {stats?.avgSatisfactionScore || 4.7} / 5.0</h3>
+          <h3 className="text-xl font-black">Overall User Satisfaction Score: {effectiveStats?.avgSatisfactionScore || 4.7} / 5.0</h3>
           <p className="text-xs text-blue-200">
-            Based on {stats?.surveyCount || 3} student, faculty, and technician evaluation responses.
+            Based on {effectiveStats?.surveyCount || 3} student, faculty, and technician evaluation responses.
           </p>
         </div>
 
@@ -205,7 +218,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <span className="text-slate-500 font-bold block">Resolution Efficiency Rate</span>
             <span className="text-2xl font-black text-emerald-600 mt-1 block">
-              {Math.round(((stats?.resolvedCount || 1) / total) * 100)}%
+              {Math.round(((effectiveStats?.resolvedCount || 1) / total) * 100)}%
             </span>
             <span className="text-[10px] text-slate-400 mt-1 block">Resolved vs Total Reports</span>
           </div>
@@ -213,7 +226,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <span className="text-slate-500 font-bold block">Avg Resolution Turnaround</span>
             <span className="text-2xl font-black text-blue-900 mt-1 block">
-              {stats?.avgResolutionTimeHours || 24} Hours
+              {effectiveStats?.avgResolutionTimeHours || 24} Hours
             </span>
             <span className="text-[10px] text-slate-400 mt-1 block">Time from Filing to Completion</span>
           </div>
@@ -221,7 +234,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <span className="text-slate-500 font-bold block">Safety Hazards Mitigated</span>
             <span className="text-2xl font-black text-red-600 mt-1 block">
-              {stats?.urgentHazardCount || 0}
+              {effectiveStats?.urgentHazardCount || 0}
             </span>
             <span className="text-[10px] text-slate-400 mt-1 block">High priority risks resolved</span>
           </div>
@@ -229,7 +242,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <span className="text-slate-500 font-bold block">Evaluation Responses</span>
             <span className="text-2xl font-black text-amber-600 mt-1 block">
-              {stats?.surveyCount || 3} Evaluators
+              {effectiveStats?.surveyCount || 3} Evaluators
             </span>
             <span className="text-[10px] text-slate-400 mt-1 block">SUS Research Participants</span>
           </div>
@@ -239,7 +252,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       <PrintableReportModal
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
-        stats={stats}
+        stats={effectiveStats}
         complaints={complaints}
       />
     </div>

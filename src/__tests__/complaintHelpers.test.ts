@@ -5,6 +5,7 @@ import {
   validateComplaintPayload,
   filterComplaints,
   inferPriority,
+  computeStatsFromComplaints,
 } from '../utils/complaintHelpers';
 import { Complaint } from '../types';
 
@@ -177,6 +178,52 @@ describe('Unit Tests: Complaint Helper Utilities', () => {
 
     it('should assign Medium priority to HVAC & Ventilation', () => {
       expect(inferPriority('HVAC & Ventilation', 'Classroom 102')).toBe('Medium');
+    });
+  });
+
+  describe('computeStatsFromComplaints()', () => {
+    it('should correctly compute category and building breakdown from complaints', () => {
+      const mockList: Complaint[] = [
+        {
+          id: '1',
+          trackingCode: 'CMP-101',
+          title: 'AC Noise',
+          description: 'Loud fan noise',
+          category: 'HVAC & Ventilation',
+          locationBuilding: 'Senior High Building C',
+          locationRoom: '304',
+          priority: 'High',
+          status: 'In Progress',
+          logs: [],
+          createdAt: '2026-08-01T00:00:00Z',
+          updatedAt: '2026-08-01T00:00:00Z',
+          isArchived: false,
+          isAnonymous: false,
+        },
+        {
+          id: '2',
+          trackingCode: 'CMP-102',
+          title: 'Pipe Leak',
+          description: 'Water leak',
+          category: 'Plumbing & Water',
+          locationBuilding: 'Main Building A',
+          locationRoom: '101',
+          priority: 'Urgent / Hazard',
+          status: 'Filed',
+          logs: [],
+          createdAt: '2026-08-02T00:00:00Z',
+          updatedAt: '2026-08-02T00:00:00Z',
+          isArchived: false,
+          isAnonymous: false,
+        },
+      ];
+
+      const stats = computeStatsFromComplaints(mockList);
+      expect(stats.totalComplaints).toBe(2);
+      expect(stats.categoryBreakdown['HVAC & Ventilation']).toBe(1);
+      expect(stats.categoryBreakdown['Plumbing & Water']).toBe(1);
+      expect(stats.buildingBreakdown['Senior High Building C']).toBe(1);
+      expect(stats.buildingBreakdown['Main Building A']).toBe(1);
     });
   });
 });
