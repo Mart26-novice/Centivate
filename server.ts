@@ -1,13 +1,11 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from './src/data/initialData.js';
 import { Complaint, ComplaintPriority, ComplaintCategory, ComplaintStatus, SurveyResponse, StatusLog, SystemStats, MaintenanceStaff } from './src/types.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : path.resolve();
 
 // In-memory data store with initial seed
 let complaintsStore: Complaint[] = JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
