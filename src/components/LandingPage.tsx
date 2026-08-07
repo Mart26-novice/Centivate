@@ -18,7 +18,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { UserSession } from '../types';
-import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
+import campusBg from '../assets/images/cpu_campus_aerial.webp';
 
 interface LandingPageProps {
   onNavigate: (tab: 'student' | 'admin' | 'analytics' | 'research') => void;

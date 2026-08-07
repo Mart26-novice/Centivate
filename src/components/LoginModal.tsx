@@ -20,7 +20,7 @@ import { UserRole, UserSession } from '../types';
 import { PRESET_USERS } from '../data/authData';
 import { auth } from '../lib/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
+import campusBg from '../assets/images/cpu_campus_aerial.webp';
 
 interface LoginModalProps {
   isOpen: boolean;

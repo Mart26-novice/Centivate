@@ -3,17 +3,28 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { UserCheck, ShieldAlert, Lock, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { UserCheck, ShieldAlert, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
-import { StudentPortal } from './components/StudentPortal';
-import { AdminDashboard } from './components/AdminDashboard';
-import { AnalyticsView } from './components/AnalyticsView';
 import { PublicTracker } from './components/PublicTracker';
 import { ResearchInfoModal } from './components/ResearchInfoModal';
 import { ComplaintDetailsModal } from './components/ComplaintDetailsModal';
 import { LoginModal } from './components/LoginModal';
+
+// Code-splitting heavy dashboard, student portal, and analytics views
+const StudentPortal = lazy(() => import('./components/StudentPortal').then((m) => ({ default: m.StudentPortal })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const AnalyticsView = lazy(() => import('./components/AnalyticsView').then((m) => ({ default: m.AnalyticsView })));
+
+const LoadingFallback = () => (
+  <div className="flex flex-col items-center justify-center min-h-[400px] p-8 space-y-3 animate-fadeIn">
+    <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
+    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+      Loading View...
+    </span>
+  </div>
+);
 import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole, OfficialStudent } from './types';
 import { INITIAL_COMPLAINTS, INITIAL_STAFF, INITIAL_STUDENTS } from './data/initialData';
 import { PRESET_USERS } from './data/authData';
@@ -336,9 +347,18 @@ export default function App() {
     setActiveTab(tab);
   };
 
-  const pendingCount = complaints.filter((c) => !c.isArchived && (c.status === 'Filed' || c.status === 'Pending')).length;
-  const urgentCount = complaints.filter((c) => !c.isArchived && (c.priority === 'Urgent / Hazard' || c.priority === 'High')).length;
-  const resolvedCount = complaints.filter((c) => c.status === 'Resolved').length;
+  const pendingCount = useMemo(
+    () => complaints.filter((c) => !c.isArchived && (c.status === 'Filed' || c.status === 'Pending')).length,
+    [complaints]
+  );
+  const urgentCount = useMemo(
+    () => complaints.filter((c) => !c.isArchived && (c.priority === 'Urgent / Hazard' || c.priority === 'High')).length,
+    [complaints]
+  );
+  const resolvedCount = useMemo(
+    () => complaints.filter((c) => c.status === 'Resolved').length,
+    [complaints]
+  );
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans selection:bg-amber-300 selection:text-blue-950">
@@ -357,167 +377,169 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {activeTab === 'home' && (
-          <LandingPage
-            onNavigate={(tab) => handleTabChange(tab)}
-            onOpenTracker={() => handleOpenTracker()}
-            onOpenLogin={(role) => handleOpenLogin(role)}
-            currentUser={currentUser}
-            totalComplaintsCount={complaints.length}
-            resolvedCount={resolvedCount}
-          />
-        )}
-
-        {activeTab === 'student' && (
-          !currentUser ? (
-            <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
-              <div className="w-20 h-20 bg-amber-100 text-blue-950 rounded-3xl flex items-center justify-center mx-auto border-2 border-amber-300 shadow-xl">
-                <UserCheck className="w-10 h-10 text-blue-950" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">Student Sign-In Required</h2>
-                <p className="text-sm text-slate-600 max-w-md mx-auto">
-                  Please log in with your CPU Senior High School student account to file maintenance reports and track your submitted tickets.
-                </p>
-              </div>
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-                <button
-                  onClick={() => handleOpenLogin('student')}
-                  className="px-8 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 transform active:scale-95 transition-all"
-                >
-                  Sign In as Student
-                </button>
-                <button
-                  onClick={() => setActiveTab('home')}
-                  className="px-6 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-2xl transition-colors"
-                >
-                  Return to Home Page
-                </button>
-              </div>
-            </div>
-          ) : currentUser.role !== 'student' ? (
-            <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
-              <div className="w-20 h-20 bg-red-100 text-red-700 rounded-3xl flex items-center justify-center mx-auto border-2 border-red-300 shadow-xl">
-                <ShieldAlert className="w-10 h-10 text-red-700" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">Student Access Restricted</h2>
-                <p className="text-sm text-slate-600 max-w-md mx-auto">
-                  You are currently signed in as <strong className="text-blue-950">{currentUser.fullName}</strong> (<span className="text-amber-700 font-bold uppercase">{currentUser.role}</span>).
-                  The Student Portal is dedicated to student complaint filing. Admin operations should be performed in the Facilities Admin Dashboard.
-                </p>
-              </div>
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-                <button
-                  onClick={() => handleOpenLogin('student')}
-                  className="px-8 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 transform active:scale-95 transition-all"
-                >
-                  Switch / Sign In as Student
-                </button>
-                <button
-                  onClick={() => setActiveTab('admin')}
-                  className="px-6 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-2xl shadow transition-colors"
-                >
-                  Go to Admin Dashboard
-                </button>
-              </div>
-            </div>
-          ) : (
-            <StudentPortal
-              complaints={complaints.filter((c) => !c.isArchived)}
-              onCreateComplaint={handleCreateComplaint}
-              onSelectComplaint={(c) => setSelectedComplaint(c)}
-              onOpenTracker={handleOpenTracker}
+        <Suspense fallback={<LoadingFallback />}>
+          {activeTab === 'home' && (
+            <LandingPage
+              onNavigate={(tab) => handleTabChange(tab)}
+              onOpenTracker={() => handleOpenTracker()}
+              onOpenLogin={(role) => handleOpenLogin(role)}
               currentUser={currentUser}
-              onOpenLogin={() => handleOpenLogin('student')}
+              totalComplaintsCount={complaints.length}
+              resolvedCount={resolvedCount}
             />
-          )
-        )}
+          )}
 
-        {activeTab === 'admin' && (
-          !currentUser ? (
-            <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
-              <div className="w-20 h-20 bg-blue-100 text-blue-950 rounded-3xl flex items-center justify-center mx-auto border-2 border-blue-300 shadow-xl">
-                <Lock className="w-10 h-10 text-blue-950" />
+          {activeTab === 'student' && (
+            !currentUser ? (
+              <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+                <div className="w-20 h-20 bg-amber-100 text-blue-950 rounded-3xl flex items-center justify-center mx-auto border-2 border-amber-300 shadow-xl">
+                  <UserCheck className="w-10 h-10 text-blue-950" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">Student Sign-In Required</h2>
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">
+                    Please log in with your CPU Senior High School student account to file maintenance reports and track your submitted tickets.
+                  </p>
+                </div>
+                <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    onClick={() => handleOpenLogin('student')}
+                    className="px-8 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 transform active:scale-95 transition-all"
+                  >
+                    Sign In as Student
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('home')}
+                    className="px-6 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-2xl transition-colors"
+                  >
+                    Return to Home Page
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">Administrator Sign-In Required</h2>
-                <p className="text-sm text-slate-600 max-w-md mx-auto">
-                  Access to the Campus Physical Plant Office (CPPO) Dispatch & Admin Dashboard is strictly restricted to authorized maintenance administrators.
-                </p>
+            ) : currentUser.role !== 'student' ? (
+              <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+                <div className="w-20 h-20 bg-red-100 text-red-700 rounded-3xl flex items-center justify-center mx-auto border-2 border-red-300 shadow-xl">
+                  <ShieldAlert className="w-10 h-10 text-red-700" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">Student Access Restricted</h2>
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">
+                    You are currently signed in as <strong className="text-blue-950">{currentUser.fullName}</strong> (<span className="text-amber-700 font-bold uppercase">{currentUser.role}</span>).
+                    The Student Portal is dedicated to student complaint filing. Admin operations should be performed in the Facilities Admin Dashboard.
+                  </p>
+                </div>
+                <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    onClick={() => handleOpenLogin('student')}
+                    className="px-8 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 transform active:scale-95 transition-all"
+                  >
+                    Switch / Sign In as Student
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('admin')}
+                    className="px-6 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-2xl shadow transition-colors"
+                  >
+                    Go to Admin Dashboard
+                  </button>
+                </div>
               </div>
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-                <button
-                  onClick={() => handleOpenLogin('admin')}
-                  className="px-8 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-blue-950 transform active:scale-95 transition-all flex items-center gap-2"
-                >
-                  <ShieldCheck className="w-4 h-4 text-amber-400" />
-                  <span>Sign In as Admin</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('home')}
-                  className="px-6 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-2xl transition-colors"
-                >
-                  Return to Home Page
-                </button>
+            ) : (
+              <StudentPortal
+                complaints={complaints.filter((c) => !c.isArchived)}
+                onCreateComplaint={handleCreateComplaint}
+                onSelectComplaint={(c) => setSelectedComplaint(c)}
+                onOpenTracker={handleOpenTracker}
+                currentUser={currentUser}
+                onOpenLogin={() => handleOpenLogin('student')}
+              />
+            )
+          )}
+
+          {activeTab === 'admin' && (
+            !currentUser ? (
+              <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+                <div className="w-20 h-20 bg-blue-100 text-blue-950 rounded-3xl flex items-center justify-center mx-auto border-2 border-blue-300 shadow-xl">
+                  <Lock className="w-10 h-10 text-blue-950" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">Administrator Sign-In Required</h2>
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">
+                    Access to the Campus Physical Plant Office (CPPO) Dispatch & Admin Dashboard is strictly restricted to authorized maintenance administrators.
+                  </p>
+                </div>
+                <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    onClick={() => handleOpenLogin('admin')}
+                    className="px-8 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-blue-950 transform active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <span>Sign In as Admin</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('home')}
+                    className="px-6 py-3.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs rounded-2xl transition-colors"
+                  >
+                    Return to Home Page
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : currentUser.role !== 'admin' ? (
-            <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
-              <div className="w-20 h-20 bg-red-100 text-red-700 rounded-3xl flex items-center justify-center mx-auto border-2 border-red-300 shadow-xl">
-                <ShieldAlert className="w-10 h-10 text-red-700" />
+            ) : currentUser.role !== 'admin' ? (
+              <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
+                <div className="w-20 h-20 bg-red-100 text-red-700 rounded-3xl flex items-center justify-center mx-auto border-2 border-red-300 shadow-xl">
+                  <ShieldAlert className="w-10 h-10 text-red-700" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">Admin Portal Access Denied</h2>
+                  <p className="text-sm text-slate-600 max-w-md mx-auto">
+                    You are currently logged in as student <strong className="text-blue-950">{currentUser.fullName}</strong>. Your account does not have administrator privileges to dispatch technicians or change repair statuses.
+                  </p>
+                </div>
+                <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    onClick={() => handleOpenLogin('admin')}
+                    className="px-8 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-blue-950 transform active:scale-95 transition-all flex items-center gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    <span>Sign In as Admin</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('student')}
+                    className="px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-bold text-xs rounded-2xl shadow transition-colors"
+                  >
+                    Return to Student Portal
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">Admin Portal Access Denied</h2>
-                <p className="text-sm text-slate-600 max-w-md mx-auto">
-                  You are currently logged in as student <strong className="text-blue-950">{currentUser.fullName}</strong>. Your account does not have administrator privileges to dispatch technicians or change repair statuses.
-                </p>
-              </div>
-              <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-                <button
-                  onClick={() => handleOpenLogin('admin')}
-                  className="px-8 py-3.5 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-blue-950 transform active:scale-95 transition-all flex items-center gap-2"
-                >
-                  <ShieldCheck className="w-4 h-4 text-amber-400" />
-                  <span>Sign In as Admin</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('student')}
-                  className="px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-bold text-xs rounded-2xl shadow transition-colors"
-                >
-                  Return to Student Portal
-                </button>
-              </div>
-            </div>
-          ) : (
-            <AdminDashboard
-              complaints={complaints}
+            ) : (
+              <AdminDashboard
+                complaints={complaints}
+                stats={stats}
+                staffList={staffList}
+                studentList={studentList}
+                onSelectComplaint={(c) => setSelectedComplaint(c)}
+                onUpdateComplaintStatus={handleUpdateComplaintStatus}
+                onArchiveComplaint={handleArchiveComplaint}
+                onAddStaff={handleCreateStaff}
+                onUpdateStaff={handleUpdateStaff}
+                onDeleteStaff={handleDeleteStaff}
+                onSaveStudent={handleSaveStudent}
+                onDeleteStudent={handleDeleteStudent}
+                onRefreshData={() => {
+                  fetchStats();
+                  fetchStaff();
+                }}
+              />
+            )
+          )}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsView
               stats={stats}
-              staffList={staffList}
-              studentList={studentList}
-              onSelectComplaint={(c) => setSelectedComplaint(c)}
-              onUpdateComplaintStatus={handleUpdateComplaintStatus}
-              onArchiveComplaint={handleArchiveComplaint}
-              onAddStaff={handleCreateStaff}
-              onUpdateStaff={handleUpdateStaff}
-              onDeleteStaff={handleDeleteStaff}
-              onSaveStudent={handleSaveStudent}
-              onDeleteStudent={handleDeleteStudent}
-              onRefreshData={() => {
-                fetchStats();
-                fetchStaff();
-              }}
+              complaints={complaints.filter((c) => !c.isArchived)}
+              onOpenResearchInfo={() => setIsResearchModalOpen(true)}
             />
-          )
-        )}
-
-        {activeTab === 'analytics' && (
-          <AnalyticsView
-            stats={stats}
-            complaints={complaints.filter((c) => !c.isArchived)}
-            onOpenResearchInfo={() => setIsResearchModalOpen(true)}
-          />
-        )}
+          )}
+        </Suspense>
       </main>
 
       {/* Global Footer */}
