@@ -19,8 +19,9 @@ service cloud.firestore {
     function isAdmin() {
       return isEmailAuth() && (
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin') ||
+        request.auth.token.email == 'admin.facilities@cpu.edu.ph' ||
         request.auth.token.email == 'admin@cpu.edu.ph' ||
-        request.auth.token.email.matches('.*admin.*')
+        request.auth.token.email == 'TugadoRheymart@gmail.com'
       );
     }
 
@@ -32,11 +33,10 @@ service cloud.firestore {
       return data.keys().hasAll(keys);
     }
 
-    // User Profiles collection - stores authenticated user roles
+    // User Profiles collection - read-only from client to prevent privilege escalation
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if isAdmin();
+      allow write: if false;
     }
 
     // Complaints collection

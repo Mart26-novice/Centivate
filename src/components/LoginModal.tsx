@@ -18,9 +18,8 @@ import {
 } from 'lucide-react';
 import { UserRole, UserSession } from '../types';
 import { PRESET_USERS } from '../data/authData';
-import { auth, db } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
 
 interface LoginModalProps {
@@ -96,13 +95,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     if (role === 'admin') {
       const isValidAdminPass = trimmedPass === 'password123' || trimmedPass === 'admin123' || trimmedPass === 'cpuAdmin2026';
       if (!isValidAdminPass) {
-        setError('Invalid admin security password. (Demo Admin Password: password123)');
+        setError('Invalid admin security credentials or password.');
         return;
       }
     } else {
       const isValidStudentPass = trimmedPass === 'password123' || trimmedPass === 'student123' || trimmedPass === 'cpuStudent2026';
       if (!isValidStudentPass) {
-        setError('Invalid student security password. (Demo Student Password: password123)');
+        setError('Invalid student security credentials or password.');
         return;
       }
     }
@@ -117,60 +116,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPass);
           firebaseUser = userCredential.user;
         } catch (signInErr: any) {
-          // If user doesn't exist yet, automatically provision user account in Firebase Auth
-          if (
+          if (signInErr.code === 'auth/operation-not-allowed') {
+            console.warn('Firebase Email/Password provider disabled in console. Proceeding with session login.');
+          } else if (
             signInErr.code === 'auth/user-not-found' ||
-            signInErr.code === 'auth/invalid-credential' ||
             signInErr.code === 'auth/wrong-password' ||
-            signInErr.code === 'auth/invalid-email'
+            signInErr.code === 'auth/invalid-credential'
           ) {
-            try {
-              const newCred = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPass);
-              firebaseUser = newCred.user;
-            } catch (createErr: any) {
-              if (createErr.code === 'auth/operation-not-allowed') {
-                console.warn('Firebase Email/Password provider is disabled in Firebase Console. Proceeding with application session login.');
-              } else if (trimmedPass.length < 6) {
-                setError('Password must be at least 6 characters for secure Firebase Authentication.');
-                setIsSubmitting(false);
-                return;
-              } else {
-                console.warn('Firebase Auth user creation notice:', createErr);
-              }
-            }
-          } else if (signInErr.code === 'auth/operation-not-allowed') {
-            console.warn('Firebase Email/Password provider is disabled in Firebase Console. Proceeding with application session login.');
+            // Do NOT auto-create accounts on client side.
+            console.warn('Firebase Auth sign-in failed:', signInErr.code);
           } else {
             console.warn('Firebase Auth sign-in notice:', signInErr);
           }
-        }
-      }
-
-      // Persist authenticated user session & role document in Firestore under /users/{uid}
-      if (db && firebaseUser) {
-        try {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          await setDoc(
-            userDocRef,
-            {
-              uid: firebaseUser.uid,
-              username: trimmedUser,
-              email: trimmedEmail,
-              role: role,
-              fullName:
-                role === 'admin'
-                  ? trimmedUser.toLowerCase() === 'admin'
-                    ? PRESET_USERS.admin.fullName
-                    : trimmedUser
-                  : trimmedUser.toLowerCase() === 'student'
-                  ? PRESET_USERS.student.fullName
-                  : trimmedUser,
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        } catch (dbErr) {
-          console.warn('User doc save notice:', dbErr);
         }
       }
 
