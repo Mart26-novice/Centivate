@@ -337,7 +337,7 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                     alt="Complaint photo"
                     className="w-full h-48 object-cover rounded-xl border border-slate-300 shadow-sm"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial_1785881684967.jpg';
+                      (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
                     }}
                   />
                 </div>

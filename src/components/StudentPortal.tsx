@@ -209,6 +209,17 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Top Banner & Quick Toggle */}
       <div className="bg-gradient-to-r from-blue-900 via-blue-950 to-indigo-950 text-white rounded-2xl p-6 sm:p-8 shadow-xl border-l-8 border-amber-400 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        {/* Background Campus Image */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <img
+            src="/cpu_campus_aerial.jpg"
+            alt="CPU Campus"
+            className="w-full h-full object-cover opacity-35"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-950/95 via-blue-950/80 to-indigo-950/90" />
+        </div>
+
         <div className="space-y-2 z-10 max-w-2xl">
           <div className="inline-flex items-center gap-2 bg-amber-400 text-blue-950 font-black text-xs px-3 py-1 rounded-full uppercase tracking-wider">
             <Zap className="w-3.5 h-3.5 fill-blue-950" />
@@ -482,7 +493,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     alt="Attached evidence"
                     className="w-28 h-28 object-cover rounded-xl border-2 border-amber-400 shadow-sm"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial_1785881684967.jpg';
+                      (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
                     }}
                   />
                   <button

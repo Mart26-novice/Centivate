@@ -20,7 +20,7 @@ import { UserRole, UserSession } from '../types';
 import { PRESET_USERS, PRESET_STUDENTS } from '../data/authData';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import campusBg from '../assets/images/cpu_campus_aerial_1785881684967.jpg';
+import campusBg from '../assets/images/cpu_campus_aerial.jpg';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -177,23 +177,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <img
               src={campusBg || '/cpu_campus_aerial.jpg'}
               alt="Central Philippine University Campus"
-              className="w-full h-full object-cover opacity-40 mix-blend-overlay scale-105 transition-transform duration-700 hover:scale-100"
+              className="w-full h-full object-cover opacity-60 scale-100 hover:scale-105 transition-transform duration-700"
               referrerPolicy="no-referrer"
               onError={(e) => {
                 const target = e.currentTarget;
-                if (!target.dataset.triedPublicJpg) {
-                  target.dataset.triedPublicJpg = 'true';
-                  target.src = '/cpu_campus_aerial_1785881684967.jpg';
-                } else if (!target.dataset.triedPublicJpgAlt) {
-                  target.dataset.triedPublicJpgAlt = 'true';
+                if (!target.src.endsWith('/cpu_campus_aerial.jpg')) {
                   target.src = '/cpu_campus_aerial.jpg';
-                } else if (!target.dataset.triedPublicWebp) {
-                  target.dataset.triedPublicWebp = 'true';
-                  target.src = '/cpu_campus_aerial.webp';
                 }
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/80 to-blue-900/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/70 to-blue-900/30" />
           </div>
 
           {/* Top Brand Header */}

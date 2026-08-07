@@ -283,7 +283,7 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
                 alt="Facility damage"
                 className="w-full h-56 object-cover rounded-xl border border-slate-300 shadow-sm"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial_1785881684967.jpg';
+                  (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
                 }}
               />
             </div>

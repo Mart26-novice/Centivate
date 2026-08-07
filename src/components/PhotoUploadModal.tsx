@@ -12,7 +12,7 @@ const PRESET_PHOTOS = [
   {
     title: 'Central Philippine University Campus Aerial',
     category: 'CPU Campus',
-    url: '/cpu_campus_aerial_1785881684967.jpg',
+    url: '/cpu_campus_aerial.jpg',
   },
   {
     title: 'Broken Wall Electric Fan',
@@ -163,7 +163,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                       alt={item.title}
                       className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial_1785881684967.jpg';
+                        (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-blue-950/90 via-blue-950/60 to-transparent p-1.5 text-white">
@@ -189,7 +189,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 alt="Selected preview"
                 className="w-16 h-16 object-cover rounded-lg border border-slate-300"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial_1785881684967.jpg';
+                  (e.currentTarget as HTMLImageElement).src = '/cpu_campus_aerial.jpg';
                 }}
               />
               <div className="flex-1">
