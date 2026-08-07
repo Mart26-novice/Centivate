@@ -11,6 +11,7 @@ import { PublicTracker } from './components/PublicTracker';
 import { ResearchInfoModal } from './components/ResearchInfoModal';
 import { ComplaintDetailsModal } from './components/ComplaintDetailsModal';
 import { LoginModal } from './components/LoginModal';
+import { IntroOverlay } from './components/IntroOverlay';
 
 // Code-splitting heavy dashboard, student portal, and analytics views
 const StudentPortal = lazy(() => import('./components/StudentPortal').then((m) => ({ default: m.StudentPortal })));
@@ -48,6 +49,28 @@ export default function App() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [staffList, setStaffList] = useState<MaintenanceStaff[]>(INITIAL_STAFF);
   const [studentList, setStudentList] = useState<OfficialStudent[]>(INITIAL_STUDENTS);
+
+  // Session Intro & Real Data Fetch Tracking
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return !sessionStorage.getItem('introShown');
+    }
+    return false;
+  });
+  const [loadedCollections, setLoadedCollections] = useState<Set<string>>(new Set());
+
+  const markCollectionLoaded = (colName: string) => {
+    setLoadedCollections((prev) => {
+      if (prev.has(colName)) return prev;
+      const next = new Set(prev);
+      next.add(colName);
+      return next;
+    });
+  };
+
+  const totalCollections = 4;
+  const fetchProgress = Math.min(100, (loadedCollections.size / totalCollections) * 100);
+  const isDataLoaded = loadedCollections.size >= totalCollections;
 
   // Authentication state
   const [currentUser, setCurrentUser] = useState<UserSession | null>(PRESET_USERS.student);
@@ -105,26 +128,40 @@ export default function App() {
     const unsubscribeComplaints = subscribeToComplaints((liveComplaints) => {
       setComplaints(liveComplaints);
       setStats((prevStats) => computeStatsFromComplaints(liveComplaints, prevStats));
+      markCollectionLoaded('complaints');
     });
 
     // 2. Subscribe to official students in Firestore
     const unsubscribeStudents = subscribeToStudents((liveStudents) => {
       setStudentList(liveStudents);
+      markCollectionLoaded('students');
     });
 
     // 3. Subscribe to staff in Firestore (auto-seeds staff collection if empty)
     const unsubscribeStaff = subscribeToStaff((liveStaff) => {
       setStaffList(liveStaff);
+      markCollectionLoaded('staff');
     });
 
     // 4. Subscribe to surveys in Firestore (auto-seeds surveys collection if empty)
     const unsubscribeSurveys = subscribeToSurveys(() => {
       fetchStats();
+      markCollectionLoaded('surveys');
     });
 
     fetchStats();
 
+    // Safety fallback timer if Firestore connection is slow or operating in offline mode
+    const fallbackTimer = setTimeout(() => {
+      markCollectionLoaded('complaints');
+      markCollectionLoaded('students');
+      markCollectionLoaded('staff');
+      markCollectionLoaded('surveys');
+      markCollectionLoaded('stats');
+    }, 2500);
+
     return () => {
+      clearTimeout(fallbackTimer);
       unsubscribeComplaints();
       unsubscribeStudents();
       unsubscribeStaff();
@@ -144,6 +181,8 @@ export default function App() {
     } catch (err) {
       console.warn('Stats fetch failed, using live client computed stats:', err);
       setStats((prev) => computeStatsFromComplaints(complaints, prev));
+    } finally {
+      markCollectionLoaded('stats');
     }
   };
 
@@ -412,6 +451,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans selection:bg-amber-300 selection:text-blue-950">
+      {/* Session Intro Overlay */}
+      {showIntro && (
+        <IntroOverlay
+          progress={fetchProgress}
+          isDataLoaded={isDataLoaded}
+          onDismiss={() => setShowIntro(false)}
+        />
+      )}
+
       {/* Global Header */}
       <Header
         activeTab={activeTab}

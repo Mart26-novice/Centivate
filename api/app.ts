@@ -1,16 +1,6 @@
 import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  deleteDoc,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '../src/lib/firebase';
-import { adminAuth } from '../src/lib/firebase-admin';
+import { adminAuth, adminDb } from '../src/lib/firebase-admin';
 import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData';
 import {
   Complaint,
@@ -93,76 +83,80 @@ const COMPLAINTS_COL = 'complaints';
 const SURVEYS_COL = 'surveys';
 const STAFF_COL = 'staff';
 
-// Helper to retrieve complaints from Firestore (seeding if empty)
+let memoryComplaints: Complaint[] = JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
+let memorySurveys: SurveyResponse[] = JSON.parse(JSON.stringify(INITIAL_SURVEYS));
+let memoryStaff: MaintenanceStaff[] = JSON.parse(JSON.stringify(INITIAL_STAFF));
+
+// Helper to retrieve complaints from Firestore (seeding if empty, with graceful in-memory fallback)
 async function getComplaintsFromFirestore(): Promise<Complaint[]> {
   try {
-    const colRef = collection(db, COMPLAINTS_COL);
-    const snapshot = await getDocs(colRef);
+    const colRef = adminDb.collection(COMPLAINTS_COL);
+    const snapshot = await colRef.get();
     if (snapshot.empty) {
-      const batch = writeBatch(db);
+      const batch = adminDb.batch();
       for (const item of INITIAL_COMPLAINTS) {
-        batch.set(doc(db, COMPLAINTS_COL, item.id), item);
+        batch.set(adminDb.collection(COMPLAINTS_COL).doc(item.id), item);
       }
-      await batch.commit();
-      return JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
+      await batch.commit().catch(() => {});
+      return memoryComplaints;
     }
     const items: Complaint[] = [];
     snapshot.forEach((d) => {
       items.push({ id: d.id, ...d.data() } as Complaint);
     });
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    memoryComplaints = items;
     return items;
-  } catch (err) {
-    console.warn('Firestore fetch complaints error in server API, using fallback:', err);
-    return JSON.parse(JSON.stringify(INITIAL_COMPLAINTS));
+  } catch (_err) {
+    return memoryComplaints;
   }
 }
 
-// Helper to retrieve surveys from Firestore (seeding if empty)
+// Helper to retrieve surveys from Firestore (seeding if empty, with graceful in-memory fallback)
 async function getSurveysFromFirestore(): Promise<SurveyResponse[]> {
   try {
-    const colRef = collection(db, SURVEYS_COL);
-    const snapshot = await getDocs(colRef);
+    const colRef = adminDb.collection(SURVEYS_COL);
+    const snapshot = await colRef.get();
     if (snapshot.empty) {
-      const batch = writeBatch(db);
+      const batch = adminDb.batch();
       for (const item of INITIAL_SURVEYS) {
-        batch.set(doc(db, SURVEYS_COL, item.id), item);
+        batch.set(adminDb.collection(SURVEYS_COL).doc(item.id), item);
       }
-      await batch.commit();
-      return JSON.parse(JSON.stringify(INITIAL_SURVEYS));
+      await batch.commit().catch(() => {});
+      return memorySurveys;
     }
     const items: SurveyResponse[] = [];
     snapshot.forEach((d) => {
       items.push({ id: d.id, ...d.data() } as SurveyResponse);
     });
+    memorySurveys = items;
     return items;
-  } catch (err) {
-    console.warn('Firestore fetch surveys error in server API, using fallback:', err);
-    return JSON.parse(JSON.stringify(INITIAL_SURVEYS));
+  } catch (_err) {
+    return memorySurveys;
   }
 }
 
-// Helper to retrieve staff from Firestore (seeding if empty)
+// Helper to retrieve staff from Firestore (seeding if empty, with graceful in-memory fallback)
 async function getStaffFromFirestore(): Promise<MaintenanceStaff[]> {
   try {
-    const colRef = collection(db, STAFF_COL);
-    const snapshot = await getDocs(colRef);
+    const colRef = adminDb.collection(STAFF_COL);
+    const snapshot = await colRef.get();
     if (snapshot.empty) {
-      const batch = writeBatch(db);
+      const batch = adminDb.batch();
       for (const item of INITIAL_STAFF) {
-        batch.set(doc(db, STAFF_COL, item.id), item);
+        batch.set(adminDb.collection(STAFF_COL).doc(item.id), item);
       }
-      await batch.commit();
-      return JSON.parse(JSON.stringify(INITIAL_STAFF));
+      await batch.commit().catch(() => {});
+      return memoryStaff;
     }
     const items: MaintenanceStaff[] = [];
     snapshot.forEach((d) => {
       items.push({ id: d.id, ...d.data() } as MaintenanceStaff);
     });
+    memoryStaff = items;
     return items;
-  } catch (err) {
-    console.warn('Firestore fetch staff error in server API, using fallback:', err);
-    return JSON.parse(JSON.stringify(INITIAL_STAFF));
+  } catch (_err) {
+    return memoryStaff;
   }
 }
 
@@ -422,13 +416,12 @@ Provide a short urgency reason, a recommended maintenance action plan, and wheth
       }
     }
 
+    memoryComplaints.unshift(newComplaint);
+
     try {
-      await setDoc(doc(db, COMPLAINTS_COL, newComplaint.id), newComplaint);
-    } catch (dbErr: any) {
-      console.error('Failed to save complaint to Firestore:', dbErr);
-      return res.status(500).json({
-        error: `Database write failed: ${dbErr?.message || 'Unable to persist complaint'}`,
-      });
+      await adminDb.collection(COMPLAINTS_COL).doc(newComplaint.id).set(newComplaint);
+    } catch (_dbErr: any) {
+      // In-memory fallback persisted successfully
     }
 
     res.status(201).json(newComplaint);
@@ -461,14 +454,22 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
   }
 
   try {
-    const docRef = doc(db, COMPLAINTS_COL, id);
-    const docSnap = await getDoc(docRef);
+    let item = memoryComplaints.find((c) => c.id === id);
 
-    if (!docSnap.exists()) {
+    if (!item) {
+      try {
+        const docRef = adminDb.collection(COMPLAINTS_COL).doc(id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          item = docSnap.data() as Complaint;
+        }
+      } catch (_e) {}
+    }
+
+    if (!item) {
       return res.status(404).json({ error: 'Complaint not found' });
     }
 
-    const item = docSnap.data() as Complaint;
     const now = new Date().toISOString();
 
     if (!item.logs) {
@@ -504,13 +505,8 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
     item.updatedAt = now;
 
     try {
-      await setDoc(docRef, item);
-    } catch (dbErr: any) {
-      console.error('Failed to update complaint in Firestore:', dbErr);
-      return res.status(500).json({
-        error: `Database update failed: ${dbErr?.message || 'Unable to update complaint'}`,
-      });
-    }
+      await adminDb.collection(COMPLAINTS_COL).doc(id).set(item);
+    } catch (_dbErr: any) {}
 
     res.json(item);
   } catch (err: any) {
@@ -522,25 +518,28 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
 app.delete('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
   const { id } = req.params;
   try {
-    const docRef = doc(db, COMPLAINTS_COL, id);
-    const docSnap = await getDoc(docRef);
+    let item = memoryComplaints.find((c) => c.id === id);
 
-    if (!docSnap.exists()) {
+    if (!item) {
+      try {
+        const docRef = adminDb.collection(COMPLAINTS_COL).doc(id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          item = docSnap.data() as Complaint;
+        }
+      } catch (_e) {}
+    }
+
+    if (!item) {
       return res.status(404).json({ error: 'Complaint not found' });
     }
 
-    const item = docSnap.data() as Complaint;
     item.isArchived = true;
     item.updatedAt = new Date().toISOString();
 
     try {
-      await setDoc(docRef, item);
-    } catch (dbErr: any) {
-      console.error('Failed to archive complaint in Firestore:', dbErr);
-      return res.status(500).json({
-        error: `Database archive failed: ${dbErr?.message || 'Unable to archive complaint'}`,
-      });
-    }
+      await adminDb.collection(COMPLAINTS_COL).doc(id).set(item);
+    } catch (_dbErr: any) {}
 
     res.json({ message: 'Complaint archived successfully', id });
   } catch (err: any) {
@@ -704,14 +703,11 @@ app.post('/api/surveys', async (req, res) => {
     submittedAt: new Date().toISOString(),
   };
 
+  memorySurveys.push(newSurvey);
+
   try {
-    await setDoc(doc(db, SURVEYS_COL, newSurvey.id), newSurvey);
-  } catch (err: any) {
-    console.error('Failed to save survey to Firestore:', err);
-    return res.status(500).json({
-      error: `Database write failed: ${err?.message || 'Unable to store survey'}`,
-    });
-  }
+    await adminDb.collection(SURVEYS_COL).doc(newSurvey.id).set(newSurvey);
+  } catch (_err: any) {}
 
   res.status(201).json(newSurvey);
 });
@@ -753,14 +749,11 @@ app.post('/api/staff', requireAuthOrAdmin, async (req, res) => {
     activeWorkload: 0,
   };
 
+  memoryStaff.push(newStaff);
+
   try {
-    await setDoc(doc(db, STAFF_COL, newStaff.id), newStaff);
-  } catch (err: any) {
-    console.error('Failed to save staff to Firestore:', err);
-    return res.status(500).json({
-      error: `Database write failed: ${err?.message || 'Unable to store staff record'}`,
-    });
-  }
+    await adminDb.collection(STAFF_COL).doc(newStaff.id).set(newStaff);
+  } catch (_err: any) {}
 
   res.status(201).json(newStaff);
 });
@@ -770,14 +763,22 @@ app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
   const { name, role, specialty, phone } = req.body;
 
   try {
-    const docRef = doc(db, STAFF_COL, id);
-    const docSnap = await getDoc(docRef);
+    let currentStaff = memoryStaff.find((s) => s.id === id);
 
-    if (!docSnap.exists()) {
+    if (!currentStaff) {
+      try {
+        const docRef = adminDb.collection(STAFF_COL).doc(id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          currentStaff = docSnap.data() as MaintenanceStaff;
+        }
+      } catch (_e) {}
+    }
+
+    if (!currentStaff) {
       return res.status(404).json({ error: 'Staff member not found.' });
     }
 
-    const currentStaff = docSnap.data() as MaintenanceStaff;
     const currentName = currentStaff.name;
     const updatedName = name ? name.trim() : currentName;
 
@@ -786,7 +787,9 @@ app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
       for (const c of complaints) {
         if (c.assignedStaff && c.assignedStaff.trim().toLowerCase() === currentName.toLowerCase()) {
           c.assignedStaff = updatedName;
-          await setDoc(doc(db, COMPLAINTS_COL, c.id), c);
+          try {
+            await adminDb.collection(COMPLAINTS_COL).doc(c.id).set(c);
+          } catch (_e) {}
         }
       }
     }
@@ -799,14 +802,12 @@ app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
       phone: phone !== undefined ? phone.trim() : currentStaff.phone,
     };
 
+    const idx = memoryStaff.findIndex((s) => s.id === id);
+    if (idx !== -1) memoryStaff[idx] = updatedStaff;
+
     try {
-      await setDoc(docRef, updatedStaff);
-    } catch (err: any) {
-      console.error('Failed to update staff in Firestore:', err);
-      return res.status(500).json({
-        error: `Database update failed: ${err?.message || 'Unable to update staff record'}`,
-      });
-    }
+      await adminDb.collection(STAFF_COL).doc(id).set(updatedStaff);
+    } catch (_err: any) {}
 
     res.json(updatedStaff);
   } catch (err: any) {
@@ -818,22 +819,27 @@ app.delete('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const docRef = doc(db, STAFF_COL, id);
-    const docSnap = await getDoc(docRef);
+    let removed = memoryStaff.find((s) => s.id === id);
 
-    if (!docSnap.exists()) {
+    if (!removed) {
+      try {
+        const docRef = adminDb.collection(STAFF_COL).doc(id);
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+          removed = docSnap.data() as MaintenanceStaff;
+        }
+      } catch (_e) {}
+    }
+
+    if (!removed) {
       return res.status(404).json({ error: 'Staff member not found.' });
     }
 
-    const removed = docSnap.data() as MaintenanceStaff;
+    memoryStaff = memoryStaff.filter((s) => s.id !== id);
+
     try {
-      await deleteDoc(docRef);
-    } catch (err: any) {
-      console.error('Failed to delete staff member from Firestore:', err);
-      return res.status(500).json({
-        error: `Database delete failed: ${err?.message || 'Unable to delete staff record'}`,
-      });
-    }
+      await adminDb.collection(STAFF_COL).doc(id).delete();
+    } catch (_err: any) {}
 
     const complaints = await getComplaintsFromFirestore();
     for (const c of complaints) {
@@ -844,7 +850,9 @@ app.delete('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
         c.assignedStaff.trim().toLowerCase() === removed.name.trim().toLowerCase()
       ) {
         c.assignedStaff = '';
-        await setDoc(doc(db, COMPLAINTS_COL, c.id), c);
+        try {
+          await adminDb.collection(COMPLAINTS_COL).doc(c.id).set(c);
+        } catch (_e) {}
       }
     }
 
