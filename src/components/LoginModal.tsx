@@ -218,12 +218,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 const target = e.currentTarget;
                 if (!target.dataset.triedPublicJpg) {
                   target.dataset.triedPublicJpg = 'true';
+                  target.src = '/cpu_campus_aerial_1785881684967.jpg';
+                } else if (!target.dataset.triedPublicJpgAlt) {
+                  target.dataset.triedPublicJpgAlt = 'true';
                   target.src = '/cpu_campus_aerial.jpg';
                 } else if (!target.dataset.triedPublicWebp) {
                   target.dataset.triedPublicWebp = 'true';
                   target.src = '/cpu_campus_aerial.webp';
-                } else {
-                  target.src = 'https://images.unsplash.com/photo-1562774053-701939374585?w=1200&auto=format&fit=crop&q=80';
                 }
               }}
             />
