@@ -208,12 +208,41 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Calculate Real-Time Metrics from active live complaints array
+  const activeComplaints = complaints.filter((c) => !c.isArchived);
+  const liveTotal = activeComplaints.length;
+  const livePending = activeComplaints.filter((c) => c.status === 'Filed' || c.status === 'Pending').length;
+  const liveInProgress = activeComplaints.filter((c) => c.status === 'In Progress').length;
+  const liveResolved = activeComplaints.filter((c) => c.status === 'Resolved').length;
+  const liveUrgent = activeComplaints.filter((c) => c.priority === 'Urgent / Hazard').length;
+
+  const resolvedItems = activeComplaints.filter((c) => c.status === 'Resolved');
+  let totalHoursSum = 0;
+  resolvedItems.forEach((c) => {
+    const created = new Date(c.createdAt).getTime();
+    const updated = new Date(c.updatedAt).getTime();
+    const diffMs = Math.max(0, updated - created);
+    totalHoursSum += diffMs / (1000 * 60 * 60);
+  });
+  const liveAvgHours =
+    resolvedItems.length > 0
+      ? (totalHoursSum / resolvedItems.length).toFixed(1)
+      : stats?.avgResolutionTimeHours
+      ? stats.avgResolutionTimeHours.toFixed(1)
+      : '24.0';
+
   // Filter Logic for Complaints
   const filtered = complaints.filter((c) => {
     if (!showArchived && c.isArchived) return false;
     if (showArchived && !c.isArchived) return false;
 
-    if (selectedStatus !== 'All' && c.status !== selectedStatus) return false;
+    if (selectedStatus !== 'All') {
+      if (selectedStatus === 'Pending') {
+        if (c.status !== 'Pending' && c.status !== 'Filed') return false;
+      } else if (c.status !== selectedStatus) {
+        return false;
+      }
+    }
     if (selectedCategory !== 'All' && c.category !== selectedCategory) return false;
     if (selectedBuilding !== 'All' && c.locationBuilding !== selectedBuilding) return false;
 
@@ -223,6 +252,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         c.title.toLowerCase().includes(q) ||
         c.trackingCode.toLowerCase().includes(q) ||
         c.locationRoom.toLowerCase().includes(q) ||
+        c.priority.toLowerCase().includes(q) ||
         (c.studentName && c.studentName.toLowerCase().includes(q)) ||
         (c.assignedStaff && c.assignedStaff.toLowerCase().includes(q))
       );
@@ -396,79 +426,127 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-1">
-          <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+        <button
+          onClick={() => {
+            setSelectedStatus('All');
+            setShowArchived(false);
+            setSearchQuery('');
+            setActiveTab('table');
+          }}
+          className={`p-4 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md ${
+            selectedStatus === 'All' && !showArchived && !searchQuery
+              ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-300'
+              : 'bg-white border-slate-200 hover:border-blue-300'
+          }`}
+        >
+          <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
             Total Reports
           </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-blue-950">
-              {stats?.totalComplaints ?? complaints.length}
-            </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-2xl font-black text-blue-950">{liveTotal}</span>
             <LayoutDashboard className="w-5 h-5 text-blue-800" />
           </div>
-        </div>
+        </button>
 
         {/* Filed / Pending */}
-        <div className="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm space-y-1">
+        <button
+          onClick={() => {
+            setSelectedStatus('Pending');
+            setShowArchived(false);
+            setSearchQuery('');
+            setActiveTab('table');
+          }}
+          className={`p-4 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md ${
+            selectedStatus === 'Pending'
+              ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-300'
+              : 'bg-white border-amber-200 hover:border-amber-300'
+          }`}
+        >
           <span className="text-[10px] font-extrabold uppercase text-amber-600 tracking-wider">
             Pending Review
           </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-amber-600">
-              {(stats?.filedCount ?? 0) + (stats?.pendingCount ?? 0)}
-            </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-2xl font-black text-amber-600">{livePending}</span>
             <Clock className="w-5 h-5 text-amber-500" />
           </div>
-        </div>
+        </button>
 
         {/* In Progress */}
-        <div className="bg-white p-4 rounded-2xl border border-indigo-200 shadow-sm space-y-1">
+        <button
+          onClick={() => {
+            setSelectedStatus('In Progress');
+            setShowArchived(false);
+            setSearchQuery('');
+            setActiveTab('table');
+          }}
+          className={`p-4 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md ${
+            selectedStatus === 'In Progress'
+              ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-300'
+              : 'bg-white border-indigo-200 hover:border-indigo-300'
+          }`}
+        >
           <span className="text-[10px] font-extrabold uppercase text-indigo-600 tracking-wider">
             In Progress
           </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-indigo-600">
-              {stats?.inProgressCount ?? 0}
-            </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-2xl font-black text-indigo-600">{liveInProgress}</span>
             <Wrench className="w-5 h-5 text-indigo-500" />
           </div>
-        </div>
+        </button>
 
         {/* Resolved */}
-        <div className="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm space-y-1">
+        <button
+          onClick={() => {
+            setSelectedStatus('Resolved');
+            setShowArchived(false);
+            setSearchQuery('');
+            setActiveTab('table');
+          }}
+          className={`p-4 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md ${
+            selectedStatus === 'Resolved'
+              ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300'
+              : 'bg-white border-emerald-200 hover:border-emerald-300'
+          }`}
+        >
           <span className="text-[10px] font-extrabold uppercase text-emerald-600 tracking-wider">
             Resolved
           </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-emerald-600">
-              {stats?.resolvedCount ?? 0}
-            </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-2xl font-black text-emerald-600">{liveResolved}</span>
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
           </div>
-        </div>
+        </button>
 
         {/* Urgent Hazards */}
-        <div className="bg-white p-4 rounded-2xl border border-red-200 shadow-sm space-y-1">
+        <button
+          onClick={() => {
+            setSelectedStatus('All');
+            setShowArchived(false);
+            setSearchQuery('Urgent');
+            setActiveTab('table');
+          }}
+          className={`p-4 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md ${
+            searchQuery === 'Urgent'
+              ? 'bg-red-50 border-red-400 ring-2 ring-red-300'
+              : 'bg-white border-red-200 hover:border-red-300'
+          }`}
+        >
           <span className="text-[10px] font-extrabold uppercase text-red-600 tracking-wider">
             Urgent Hazards
           </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-red-600">
-              {stats?.urgentHazardCount ?? 0}
-            </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-2xl font-black text-red-600">{liveUrgent}</span>
             <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
-        </div>
+        </button>
 
         {/* Avg Time */}
         <div className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm space-y-1">
           <span className="text-[10px] font-extrabold uppercase text-blue-800 tracking-wider">
             Avg Resolution
           </span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-blue-900">
-              {stats?.avgResolutionTimeHours ?? 24}h
-            </span>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-2xl font-black text-blue-900">{liveAvgHours}h</span>
             <Clock className="w-5 h-5 text-blue-800" />
           </div>
         </div>
