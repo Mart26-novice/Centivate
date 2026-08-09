@@ -122,7 +122,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </h1>
             </div>
-            </p>
           </div>
         </div>
 
