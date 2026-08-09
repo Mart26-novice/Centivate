@@ -101,9 +101,9 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-3.5 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         {/* Brand & Logo */}
-        <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
+        <div className="flex items-center gap-2.5 md:gap-3.5 shrink-0">
           <div className="relative group cursor-pointer shrink-0" onClick={() => handleMobileNavClick('home')}>
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-amber-400 text-blue-950 flex items-center justify-center font-black text-2xl shadow-md border-2 border-amber-300 transform group-hover:scale-105 transition-transform">
               <ShieldAlert className="w-6 h-6 md:w-7 md:h-7 text-blue-950" />
@@ -126,10 +126,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Desktop: search + nav + auth (hidden on mobile) */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex flex-wrap items-center gap-3 lg:gap-4">
           {/* Search Tracker Quick Form */}
           <form onSubmit={handleSearchSubmit} className="flex items-center">
-            <div className="relative w-72">
+            <div className="relative w-56 lg:w-72">
               <input
                 type="text"
                 placeholder="Track code (e.g. CENT-2026-8912)..."
