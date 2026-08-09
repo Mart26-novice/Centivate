@@ -122,9 +122,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </h1>
             </div>
-            <p className="hidden md:flex text-xs text-blue-200 font-medium items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
-              Senior High School Facility Maintenance & Reporting Portal
             </p>
           </div>
         </div>
