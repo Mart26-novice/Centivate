@@ -55,9 +55,6 @@ async function requireAuthOrAdmin(req: express.Request, res: express.Response, n
     }
   }
 
-  // Dev-only bypass for local/prototype testing before real auth is wired up.
-  // Requires ADMIN_DEV_BYPASS_TOKEN to be set AND NODE_ENV !== 'production'.
-  // Never set ADMIN_DEV_BYPASS_TOKEN in your production/Vercel environment.
   if (process.env.NODE_ENV !== 'production') {
     const bypassToken = process.env.ADMIN_DEV_BYPASS_TOKEN;
     const adminSessionHeader = req.headers['x-admin-authorization'];
