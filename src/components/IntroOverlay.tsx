@@ -112,7 +112,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         {/* Wordmark */}
         <div className="text-center space-y-1">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white font-sans">
-            CENT<span className="text-amber-400">I</span>VATE
+            CENTIVATE
           </h1>
           <p className="text-xs text-blue-200 font-medium tracking-wide">
             Facility Maintenance & Complaint Tracking
