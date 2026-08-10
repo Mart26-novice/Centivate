@@ -212,6 +212,65 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 
 ---
 
+## 📁 File & Directory Structure
+
+```
+.
+├── api/                             # Server Express API handlers
+│   ├── app.ts                       # Express REST endpoints & middleware
+│   └── index.ts                     # API module entry point
+├── docs/                            # Documentation
+│   └── API_REFERENCE.md             # REST API reference guide
+├── public/                          # Static public assets
+│   └── cpu_campus_aerial.jpg        # Campus aerial photo
+├── src/                             # Client React Application source
+│   ├── __tests__/                   # Automated unit & integration tests
+│   │   ├── authAndApi.test.ts
+│   │   ├── complaintHelpers.test.ts
+│   │   └── initialData.test.ts
+│   ├── components/                  # UI React components & modals
+│   │   ├── AdminDashboard.tsx       # Admin & staff workload management dashboard
+│   │   ├── AnalyticsView.tsx        # System analytics & SUS survey charts
+│   │   ├── ComplaintDetailsModal.tsx# Detailed ticket view & audit logs modal
+│   │   ├── Header.tsx               # Primary header navigation & tracking search bar
+│   │   ├── IntroOverlay.tsx         # Session intro/loading screen overlay
+│   │   ├── LandingPage.tsx          # Public campus overview & quick action hub
+│   │   ├── LoginModal.tsx           # Authentication modal for students & admins
+│   │   ├── PhotoUploadModal.tsx     # Compressed photo attachment handler
+│   │   ├── PrintableReportModal.tsx # Printable PDF/print report layout
+│   │   ├── PublicTracker.tsx        # Single-complaint tracking lookup view
+│   │   ├── ResearchInfoModal.tsx    # Academic research background & SUS survey modal
+│   │   └── StudentPortal.tsx        # Complaint filing form & history portal
+│   ├── data/                        # Static seed & preset data
+│   │   ├── authData.ts              # Preset user credentials
+│   │   └── initialData.ts           # Demo campus complaints, staff & survey seeds
+│   ├── db/                          # Database configuration
+│   │   ├── drizzle.config.ts
+│   │   ├── index.ts
+│   │   └── schema.ts                # TypeScript Drizzle database schema
+│   ├── lib/                         # Integration clients & SDKs
+│   │   ├── firebase-admin.ts        # Server-side Firebase Admin SDK initialization
+│   │   ├── firebase.ts              # Client-side Firebase App SDK initialization
+│   │   └── firestoreService.ts      # Real-time Firestore subscriptions & CRUD helpers
+│   ├── utils/                       # Helper & utility functions
+│   │   └── complaintHelpers.ts      # Tracking code generator, search & stats computers
+│   ├── App.tsx                      # Root application component & global state
+│   ├── index.css                    # Tailwind CSS imports & global styles
+│   ├── main.tsx                     # React DOM entry point
+│   └── types.ts                     # TypeScript interfaces, types & enums
+├── .env.example                     # Environment variables template
+├── firebase-applet-config.json      # Client Firebase configuration
+├── firebase-blueprint.json          # Firestore collection blueprint schema
+├── firestore.rules                  # Firestore security rules
+├── metadata.json                    # Application metadata & permissions
+├── package.json                     # Dependencies & build scripts
+├── server.ts                        # Main server entry point (Express + Vite)
+├── tsconfig.json                    # TypeScript compiler options
+└── vite.config.ts                   # Vite bundler configuration
+```
+
+---
+
 ## 📁 Project Configuration Files
 
 - `metadata.json`: Contains application name, description, frame permissions, and server capabilities.
