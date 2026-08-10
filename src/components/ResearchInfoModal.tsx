@@ -180,7 +180,7 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                   <div className="bg-white p-2 rounded-lg border border-slate-200">
                     <span className="font-extrabold text-blue-900 block">Frontend</span>
-                    <span className="text-[10px] text-slate-500">React 19 + Tailwind CSS</span>
+                    <span className="text-[10px] text-slate-500">React 18 + Tailwind CSS</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-slate-200">
                     <span className="font-extrabold text-blue-900 block">Backend</span>
