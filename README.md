@@ -1,4 +1,4 @@
-# CentIvate — Campus Facility Complaint & Maintenance Management System
+# Centivate — Campus Facility Complaint & Maintenance Management System
 
 CentIvate is a full-stack, AI-assisted web application designed for Senior High School (SHS) campus administrators, facility maintenance personnel, and students. It streamlines facility complaint reporting, real-time ticket tracking, automated urgency classification using Google Gemini 3.6 Flash AI, maintenance workload assignment, and system usability evaluation.
 
