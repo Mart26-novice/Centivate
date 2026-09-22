@@ -262,8 +262,7 @@ app.post('/api/auth/profile', async (req, res) => {
   try {
     const token = authHeader.split('Bearer ')[1];
     decoded = await (await getAdminAuth()).verifyIdToken(token);
-  } catch (_err: any) {
-    console.warn('[diag] verifyIdToken failed:', _err?.message || _err, _err?.code || '');
+  } catch (_err) {
     return res.status(401).json({ error: 'Invalid or expired authentication token.' });
   }
 
