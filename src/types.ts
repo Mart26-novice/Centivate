@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'admin';
+export type UserRole = 'student' | 'teacher' | 'admin';
 
 export interface UserSession {
   id: string;
@@ -93,6 +93,7 @@ export interface MaintenanceStaff {
   role: string;
   specialty: ComplaintCategory;
   phone: string;
+  email?: string;
   activeWorkload: number;
 }
 

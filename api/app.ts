@@ -2,6 +2,7 @@ import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { adminAuth, adminDb } from '../src/lib/firebase-admin';
 import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData';
+import { sendComplaintAssignmentEmail } from './lib/email';
 import {
   Complaint,
   ComplaintPriority,
@@ -41,6 +42,13 @@ const ADMIN_EMAILS = new Set([
   'admin@cpu.edu.ph',
   'admin.demo@cpu.edu.ph',
 ]);
+
+// Access codes gating self-service account creation for the research pilot.
+// SIGNUP_ACCESS_CODE: given to student/teacher respondents.
+// ADMIN_SIGNUP_CODE: kept by the research team only, separate and stronger.
+const SIGNUP_ACCESS_CODE = process.env.SIGNUP_ACCESS_CODE;
+const ADMIN_SIGNUP_CODE = process.env.ADMIN_SIGNUP_CODE;
+const SIGNUP_ROLES = new Set(['student', 'teacher', 'admin']);
 
 // Mirrors firestore.rules' isAdmin(): allowlisted email, or a users/{uid} doc with role === 'admin'
 async function isAdminUser(decoded: any): Promise<boolean> {
@@ -232,6 +240,57 @@ async function generateUniqueTrackingCode(): Promise<string> {
 // 1. Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', appName: 'Centivate Complaint System' });
+});
+
+// 1b. Complete account setup after Firebase client-side signup: verifies the
+// caller's ID token, checks the access code for the requested role, then
+// writes their users/{uid} profile (role + name) with the Admin SDK — this
+// endpoint is the ONLY way that document gets written, since firestore.rules
+// blocks client writes to it entirely to prevent self-assigned privilege escalation.
+app.post('/api/auth/profile', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing authentication token.' });
+  }
+
+  let decoded: any;
+  try {
+    const token = authHeader.split('Bearer ')[1];
+    decoded = await adminAuth.verifyIdToken(token);
+  } catch (_err) {
+    return res.status(401).json({ error: 'Invalid or expired authentication token.' });
+  }
+
+  const { accessCode, role, fullName, strandOrDepartment } = req.body || {};
+
+  if (!role || typeof role !== 'string' || !SIGNUP_ROLES.has(role)) {
+    return res.status(400).json({ error: 'Invalid role.' });
+  }
+
+  if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2 || fullName.trim().length > 150) {
+    return res.status(400).json({ error: 'Full name is required.' });
+  }
+
+  const requiredCode = role === 'admin' ? ADMIN_SIGNUP_CODE : SIGNUP_ACCESS_CODE;
+  if (!requiredCode || accessCode !== requiredCode) {
+    return res.status(403).json({ error: 'Invalid access code.' });
+  }
+
+  try {
+    await adminDb.collection('users').doc(decoded.uid).set(
+      {
+        email: decoded.email || '',
+        role,
+        fullName: fullName.trim(),
+        strandOrDepartment: typeof strandOrDepartment === 'string' ? strandOrDepartment.trim() : '',
+        createdAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    res.json({ success: true, role });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to complete account setup.' });
+  }
 });
 
 // 2. Get all complaints from Firestore
@@ -525,6 +584,8 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
       });
     }
 
+    const previousAssignedStaff = item.assignedStaff;
+
     if (priority) item.priority = priority;
     if (assignedStaff !== undefined) item.assignedStaff = assignedStaff;
     if (estimatedResolutionDate !== undefined) item.estimatedResolutionDate = estimatedResolutionDate;
@@ -537,6 +598,25 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
     try {
       await adminDb.collection(COMPLAINTS_COL).doc(id).set(item);
     } catch (_dbErr: any) {}
+
+    // Notify the newly assigned staff member by email, best-effort, without
+    // delaying the response to the admin dashboard.
+    if (assignedStaff && assignedStaff.trim() && assignedStaff !== previousAssignedStaff) {
+      getStaffFromFirestore()
+        .then((staffList) => {
+          const matchedStaff = staffList.find(
+            (s) => s.name.trim().toLowerCase() === assignedStaff.trim().toLowerCase()
+          );
+          if (matchedStaff?.email) {
+            return sendComplaintAssignmentEmail({
+              to: matchedStaff.email,
+              staffName: matchedStaff.name,
+              complaint: item as Complaint,
+            });
+          }
+        })
+        .catch((emailErr) => console.warn('Assignment email dispatch failed:', emailErr));
+    }
 
     res.json(item);
   } catch (err: any) {

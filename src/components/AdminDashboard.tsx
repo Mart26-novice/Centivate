@@ -29,6 +29,7 @@ import {
   X,
   Check,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { Complaint, ComplaintStatus, ComplaintCategory, BuildingLocation, SystemStats, MaintenanceStaff, OfficialStudent } from '../types';
 
@@ -118,6 +119,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [customRole, setCustomRole] = useState<string>('');
   const [specialty, setSpecialty] = useState<ComplaintCategory>('Lighting & Electrical');
   const [phone, setPhone] = useState<string>('');
+  const [staffEmail, setStaffEmail] = useState<string>('');
   const [formError, setFormError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -131,6 +133,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setCustomRole('');
     setSpecialty('Lighting & Electrical');
     setPhone('');
+    setStaffEmail('');
     setFormError('');
     setIsStaffModalOpen(true);
   };
@@ -147,6 +150,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     setSpecialty(st.specialty);
     setPhone(st.phone);
+    setStaffEmail(st.email || '');
     setFormError('');
     setIsStaffModalOpen(true);
   };
@@ -164,6 +168,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       return;
     }
 
+    const trimmedEmail = staffEmail.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setFormError('Please enter a valid notification email address.');
+      return;
+    }
+
     setIsSubmitting(true);
     setFormError('');
 
@@ -175,6 +185,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             role: finalRole,
             specialty,
             phone: phone.trim() || '0917-000-0000',
+            email: trimmedEmail,
           });
         }
       } else {
@@ -184,6 +195,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             role: finalRole,
             specialty,
             phone: phone.trim() || '0917-000-0000',
+            email: trimmedEmail,
           });
         }
       }
@@ -851,6 +863,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </span>
                         <span className="font-mono font-bold text-slate-800">{st.phone}</span>
                       </div>
+                      {st.email && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500 flex items-center gap-1">
+                            <Mail className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Notify Email:</span>
+                          </span>
+                          <span className="font-mono font-bold text-slate-800 truncate max-w-[160px]" title={st.email}>
+                            {st.email}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center pt-1 border-t border-slate-100">
                         <span className="text-slate-500 flex items-center gap-1">
                           <Wrench className="w-3.5 h-3.5 text-slate-400" />
@@ -1124,6 +1147,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
                 />
+              </div>
+
+              {/* Notification Email */}
+              <div className="space-y-1">
+                <label className="block text-slate-700 font-extrabold">Task Notification Email</label>
+                <input
+                  type="email"
+                  placeholder="e.g. lastname.centivate@gmail.com"
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                />
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Sent an email automatically whenever a complaint is assigned to this staff member. Leave blank to disable.
+                </p>
               </div>
 
               {/* Live Preview Card */}

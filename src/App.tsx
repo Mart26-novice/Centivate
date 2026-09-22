@@ -29,7 +29,6 @@ const LoadingFallback = () => (
 import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole, OfficialStudent } from './types';
 import { INITIAL_COMPLAINTS, INITIAL_STAFF, INITIAL_STUDENTS } from './data/initialData';
 import { computeStatsFromComplaints } from './utils/complaintHelpers';
-import { PRESET_USERS } from './data/authData';
 import {
   subscribeToComplaints,
   subscribeToStudents,
@@ -74,7 +73,7 @@ export default function App() {
   const isDataLoaded = loadedCollections.size >= totalCollections;
 
   // Authentication state
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(PRESET_USERS.student);
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [loginModalInitialRole, setLoginModalInitialRole] = useState<UserRole>('student');
 
@@ -515,7 +514,7 @@ export default function App() {
                   </button>
                 </div>
               </div>
-            ) : currentUser.role !== 'student' ? (
+            ) : currentUser.role === 'admin' ? (
               <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-6 animate-fadeIn">
                 <div className="w-20 h-20 bg-red-100 text-red-700 rounded-3xl flex items-center justify-center mx-auto border-2 border-red-300 shadow-xl">
                   <ShieldAlert className="w-10 h-10 text-red-700" />
