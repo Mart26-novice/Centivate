@@ -1,9 +1,9 @@
 import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
-import { adminAuth, adminDb } from '../src/lib/firebase-admin';
-import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData';
-import { sendComplaintAssignmentEmail } from './lib/email';
-import {
+import { adminAuth, adminDb, hasFirebaseAdminCredentials } from '../src/lib/firebase-admin.js';
+import { INITIAL_COMPLAINTS, INITIAL_SURVEYS, INITIAL_STAFF } from '../src/data/initialData.js';
+import { sendComplaintAssignmentEmail } from './lib/email.js';
+import type {
   Complaint,
   ComplaintPriority,
   ComplaintCategory,
@@ -13,7 +13,7 @@ import {
   StatusLog,
   SystemStats,
   MaintenanceStaff,
-} from '../src/types';
+} from '../src/types.js';
 
 const app = express();
 
@@ -248,6 +248,12 @@ app.get('/api/health', (_req, res) => {
 // endpoint is the ONLY way that document gets written, since firestore.rules
 // blocks client writes to it entirely to prevent self-assigned privilege escalation.
 app.post('/api/auth/profile', async (req, res) => {
+  if (!hasFirebaseAdminCredentials) {
+    return res.status(503).json({
+      error: 'Server is not configured for account creation yet (missing Firebase Admin credentials).',
+    });
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing authentication token.' });

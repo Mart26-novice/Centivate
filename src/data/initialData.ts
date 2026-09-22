@@ -1,4 +1,4 @@
-import { Complaint, MaintenanceStaff, OfficialStudent, SurveyResponse } from '../types';
+import type { Complaint, MaintenanceStaff, OfficialStudent, SurveyResponse } from '../types.js';
 
 export const INITIAL_STUDENTS: OfficialStudent[] = [
   {

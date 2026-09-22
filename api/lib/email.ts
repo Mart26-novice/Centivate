@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { Complaint } from '../../src/types';
+import type { Complaint } from '../../src/types.js';
 
 let resendClient: Resend | null | undefined;
 
