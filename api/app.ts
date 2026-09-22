@@ -35,9 +35,33 @@ app.use(async (req, _res, next) => {
   next();
 });
 
+// Admin email allowlist, kept in sync with the isAdmin() check in firestore.rules
+const ADMIN_EMAILS = new Set([
+  'admin.facilities@cpu.edu.ph',
+  'admin@cpu.edu.ph',
+  'admin.demo@cpu.edu.ph',
+]);
+
+// Mirrors firestore.rules' isAdmin(): allowlisted email, or a users/{uid} doc with role === 'admin'
+async function isAdminUser(decoded: any): Promise<boolean> {
+  if (decoded?.email && ADMIN_EMAILS.has(String(decoded.email).toLowerCase())) {
+    return true;
+  }
+  if (decoded?.uid) {
+    try {
+      const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+      if (userDoc.exists && (userDoc.data() as any)?.role === 'admin') {
+        return true;
+      }
+    } catch (_e) {}
+  }
+  return false;
+}
+
 // Server-side authorization check middleware for sensitive mutation endpoints
 async function requireAuthOrAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
-  if ((req as any).user) {
+  const existingUser = (req as any).user;
+  if (existingUser && (await isAdminUser(existingUser))) {
     return next();
   }
 
@@ -48,16 +72,22 @@ async function requireAuthOrAdmin(req: express.Request, res: express.Response, n
       if (adminAuth) {
         const decoded = await adminAuth.verifyIdToken(token);
         (req as any).user = decoded;
-        return next();
+        if (await isAdminUser(decoded)) {
+          return next();
+        }
+        return res.status(403).json({ error: 'Admin privileges required for this action.' });
       }
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired Firebase authentication token.' });
     }
   }
 
-  const adminSessionHeader = req.headers['x-admin-authorization'];
-  if (adminSessionHeader === 'cpu-admin-session-2026') {
-    return next();
+  if (process.env.NODE_ENV !== 'production') {
+    const bypassToken = process.env.ADMIN_DEV_BYPASS_TOKEN;
+    const adminSessionHeader = req.headers['x-admin-authorization'];
+    if (bypassToken && adminSessionHeader === bypassToken) {
+      return next();
+    }
   }
 
   return res.status(401).json({ error: 'Unauthorized access. Authentication credentials required.' });

@@ -41,6 +41,7 @@ import {
   deleteStudentFromDb,
   saveStaffToDb,
   deleteStaffFromDb,
+  getAuthHeaders,
 } from './lib/firestoreService';
 
 export default function App() {
@@ -262,7 +263,7 @@ export default function App() {
     try {
       await fetch(`/api/complaints/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify(updates),
       });
     } catch (err) {
@@ -311,7 +312,7 @@ export default function App() {
 
   const handleArchiveComplaint = async (id: string) => {
     try {
-      await fetch(`/api/complaints/${id}`, { method: 'DELETE' });
+      await fetch(`/api/complaints/${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
       setComplaints((prev) => prev.map((c) => (c.id === id ? { ...c, isArchived: true } : c)));
       if (selectedComplaint?.id === id) {
         setSelectedComplaint(null);
@@ -327,7 +328,7 @@ export default function App() {
     try {
       const res = await fetch('/api/staff', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify(staffData),
       });
       if (res.ok) {
@@ -354,7 +355,7 @@ export default function App() {
     try {
       await fetch(`/api/staff/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
         body: JSON.stringify(updates),
       });
     } catch (err) {
@@ -373,7 +374,7 @@ export default function App() {
 
   const handleDeleteStaff = async (id: string) => {
     try {
-      await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+      await fetch(`/api/staff/${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
     } catch (err) {
       console.warn('Backend API delete staff failed:', err);
     }

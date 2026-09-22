@@ -53,8 +53,8 @@ service cloud.firestore {
                     && request.resource.data.description is string && request.resource.data.description.size() <= 5000
                     && (!('photoUrl' in request.resource.data) || (request.resource.data.photoUrl is string && request.resource.data.photoUrl.size() <= 500000));
 
-      // Allow authenticated staff/admin or email auth users to update complaints with size constraints
-      allow update: if isEmailAuth()
+      // Restrict updates (status changes, assignment, resolution notes) to admin/staff users
+      allow update: if isAdmin()
                     && (!('resolutionPhotoUrl' in request.resource.data) || (request.resource.data.resolutionPhotoUrl is string && request.resource.data.resolutionPhotoUrl.size() <= 500000));
 
       // Restrict deletion to authenticated admin users

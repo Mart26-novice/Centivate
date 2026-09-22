@@ -5,7 +5,7 @@ import {
   updateDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import { Complaint, MaintenanceStaff, OfficialStudent, SurveyResponse } from '../types';
 import { INITIAL_COMPLAINTS, INITIAL_STAFF, INITIAL_STUDENTS, INITIAL_SURVEYS } from '../data/initialData';
 
@@ -13,6 +13,19 @@ const COMPLAINTS_COL = 'complaints';
 const STUDENTS_COL = 'students';
 const SURVEYS_COL = 'surveys';
 const STAFF_COL = 'staff';
+
+// Attaches the signed-in user's Firebase ID token so the Express API's
+// requireAuthOrAdmin middleware can authorize admin-only mutations.
+export const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const user = auth?.currentUser;
+  if (!user) return {};
+  try {
+    const token = await user.getIdToken();
+    return { Authorization: `Bearer ${token}` };
+  } catch {
+    return {};
+  }
+};
 
 // Subscribe to Complaints real-time with Express API fallback
 export const subscribeToComplaints = (callback: (complaints: Complaint[]) => void) => {
@@ -85,7 +98,7 @@ export const updateComplaintInDb = async (id: string, updates: Partial<Complaint
   try {
     const res = await fetch(`/api/complaints/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
       body: JSON.stringify(updates),
     });
     if (res.ok) return true;
@@ -197,7 +210,7 @@ export const saveStaffToDb = async (staffMember: MaintenanceStaff) => {
   try {
     const res = await fetch('/api/staff', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
       body: JSON.stringify(staffMember),
     });
     if (res.ok) return true;
@@ -217,7 +230,7 @@ export const saveStaffToDb = async (staffMember: MaintenanceStaff) => {
 // Delete staff member from Firestore
 export const deleteStaffFromDb = async (id: string) => {
   try {
-    const res = await fetch(`/api/staff/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/staff/${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
     if (res.ok) return true;
   } catch (err) {
     // ignore
