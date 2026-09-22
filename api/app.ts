@@ -15,9 +15,15 @@ import type {
   MaintenanceStaff,
 } from '../src/types.js';
 
+console.log('[diag] top-level imports resolved');
+
 const app = express();
 
+console.log('[diag] express app created');
+
 app.use(express.json({ limit: '10mb' }));
+
+console.log('[diag] middleware registered start');
 
 // Optional middleware to decode Firebase Authorization token if present
 app.use(async (req, _res, next) => {
@@ -238,8 +244,12 @@ async function generateUniqueTrackingCode(): Promise<string> {
 
 // 1. Health check
 app.get('/api/health', (_req, res) => {
+  console.log('[diag] health handler entered');
   res.json({ status: 'ok', appName: 'Centivate Complaint System' });
+  console.log('[diag] health handler responded');
 });
+
+console.log('[diag] module fully evaluated, app ready to export');
 
 // 1b. Complete account setup after Firebase client-side signup: verifies the
 // caller's ID token, checks the access code for the requested role, then
