@@ -30,6 +30,10 @@ import {
   Check,
   Shield,
   Mail,
+  GraduationCap,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
 } from 'lucide-react';
 import { Complaint, ComplaintStatus, ComplaintCategory, BuildingLocation, SystemStats, MaintenanceStaff, OfficialStudent } from '../types';
 
@@ -88,6 +92,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteStudent,
   onRefreshData,
 }) => {
+  // Sidebar navigation state (collapsed preference remembered per browser)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('centivate_admin_sidebar_collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('centivate_admin_sidebar_collapsed', next ? '1' : '0');
+      } catch {
+        // ignore storage failures (private browsing, etc.)
+      }
+      return next;
+    });
+  };
+
   // Filter States
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -379,63 +404,131 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     document.body.removeChild(link);
   };
 
+  const sidebarNavItems: { id: 'table' | 'staff' | 'students'; label: string; icon: typeof LayoutDashboard; count?: number }[] = [
+    { id: 'table', label: 'Work Orders', icon: LayoutDashboard, count: liveTotal },
+    { id: 'staff', label: 'Technicians', icon: Wrench, count: staffList.length },
+    { id: 'students', label: 'Student Directory', icon: GraduationCap, count: studentList.length },
+  ];
+
+  const renderSidebarNav = (variant: 'desktop' | 'mobile') =>
+    sidebarNavItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = activeTab === item.id;
+      const collapsed = variant === 'desktop' && sidebarCollapsed;
+      return (
+        <button
+          key={item.id}
+          onClick={() => {
+            setActiveTab(item.id);
+            if (variant === 'mobile') setMobileNavOpen(false);
+          }}
+          title={collapsed ? item.label : undefined}
+          className={`w-full flex items-center gap-3 rounded-xl font-bold transition-all ${
+            collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5 text-left'
+          } ${variant === 'mobile' ? 'text-sm py-3' : 'text-xs'} ${
+            isActive ? 'bg-blue-950 text-amber-300 shadow' : 'text-slate-600 hover:bg-slate-100 hover:text-blue-900'
+          }`}
+        >
+          <Icon className="w-4 h-4 shrink-0" />
+          {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+          {!collapsed && item.count !== undefined && (
+            <span
+              className={`text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
+                isActive ? 'bg-amber-400 text-blue-950' : 'bg-slate-200 text-slate-600'
+              }`}
+            >
+              {item.count}
+            </span>
+          )}
+        </button>
+      );
+    });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Page Title & Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="bg-amber-400 text-blue-950 font-black text-xs px-2.5 py-0.5 rounded-md uppercase">
-              Web Admin Portal
-            </span>
-            <span className="text-xs font-semibold text-slate-500">
-              Senior High School Maintenance Desk
-            </span>
-          </div>
-          <h2 className="text-2xl font-black text-blue-950 tracking-tight mt-1">
-            Facility Maintenance Management Dashboard
-          </h2>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center gap-1.5"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Export CSV Dataset</span>
-          </button>
-
-          <div className="flex bg-slate-200 p-1 rounded-xl">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex gap-6 items-start">
+        {/* DASHBOARD SIDEBAR (desktop/tablet) */}
+        <aside
+          className={`hidden md:flex md:flex-col shrink-0 sticky top-24 self-start bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-all duration-300 ${
+            sidebarCollapsed ? 'w-[64px]' : 'w-56'
+          }`}
+        >
+          <div className={`flex items-center border-b border-slate-100 px-3 py-3 ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            {!sidebarCollapsed && (
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Dashboard</span>
+            )}
             <button
-              onClick={() => setActiveTab('table')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'table' ? 'bg-blue-900 text-amber-300 shadow' : 'text-slate-700'
-              }`}
+              onClick={toggleSidebar}
+              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-blue-900 transition-colors"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
-              Work Orders Table
-            </button>
-            <button
-              onClick={() => setActiveTab('staff')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'staff' ? 'bg-blue-900 text-amber-300 shadow' : 'text-slate-700'
-              }`}
-            >
-              Technicians ({staffList.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('students')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeTab === 'students' ? 'bg-blue-900 text-amber-300 shadow' : 'text-slate-700'
-              }`}
-            >
-              Official Student DB ({studentList.length})
+              {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
           </div>
-        </div>
-      </div>
+          <nav className="flex flex-col gap-1 p-2">{renderSidebarNav('desktop')}</nav>
+        </aside>
 
-      {/* KPI METRIC CARDS */}
+        {/* DASHBOARD SIDEBAR (mobile drawer) */}
+        {mobileNavOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            <div
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+              onClick={() => setMobileNavOpen(false)}
+            />
+            <div className="relative w-64 max-w-[80vw] h-full bg-white shadow-2xl p-3 animate-fadeIn overflow-y-auto">
+              <div className="flex items-center justify-between px-2 py-2 mb-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Dashboard</span>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
+                  aria-label="Close menu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-1">{renderSidebarNav('mobile')}</div>
+            </div>
+          </div>
+        )}
+
+        {/* MAIN CONTENT */}
+        <div className="flex-1 min-w-0 space-y-8">
+          {/* Page Title & Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => setMobileNavOpen(true)}
+                className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors shrink-0"
+                aria-label="Open dashboard menu"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-amber-400 text-blue-950 font-black text-xs px-2.5 py-0.5 rounded-md uppercase">
+                    Web Admin Portal
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    Senior High School Maintenance Desk
+                  </span>
+                </div>
+                <h2 className="text-2xl font-black text-blue-950 tracking-tight mt-1">
+                  Facility Maintenance Management Dashboard
+                </h2>
+              </div>
+            </div>
+
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center gap-1.5 shrink-0"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Export CSV Dataset</span>
+            </button>
+          </div>
+
+          {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total */}
         <button
@@ -1032,6 +1125,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
         </div>
       )}
+        </div>
+      </div>
 
       {/* ADD / EDIT STAFF MODAL */}
       {isStaffModalOpen && (
