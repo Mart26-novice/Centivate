@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { UserCheck, ShieldAlert, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { Header } from './components/Header';
+import { AppSidebar } from './components/AppSidebar';
 import { LandingPage } from './components/LandingPage';
 import { PublicTracker } from './components/PublicTracker';
 import { ResearchInfoModal } from './components/ResearchInfoModal';
@@ -76,6 +77,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [loginModalInitialRole, setLoginModalInitialRole] = useState<UserRole>('student');
+  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
 
   // Modals
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
@@ -436,21 +438,13 @@ export default function App() {
     updateRouteHash(tab);
   };
 
-  const pendingCount = useMemo(
-    () => complaints.filter((c) => !c.isArchived && (c.status === 'Filed' || c.status === 'Pending')).length,
-    [complaints]
-  );
-  const urgentCount = useMemo(
-    () => complaints.filter((c) => !c.isArchived && (c.priority === 'Urgent / Hazard' || c.priority === 'High')).length,
-    [complaints]
-  );
   const resolvedCount = useMemo(
     () => complaints.filter((c) => c.status === 'Resolved').length,
     [complaints]
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 flex flex-col font-sans selection:bg-amber-300 selection:text-blue-950">
+    <div className="min-h-screen bg-slate-100 text-slate-800 flex font-sans selection:bg-amber-300 selection:text-blue-950">
       {/* Session Intro Overlay */}
       {showIntro && (
         <IntroOverlay
@@ -460,18 +454,25 @@ export default function App() {
         />
       )}
 
-      {/* Global Header */}
-      <Header
+      {/* App-level Navigation Sidebar */}
+      <AppSidebar
         activeTab={activeTab}
         setActiveTab={handleTabChange}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
         onOpenTracker={handleOpenTracker}
-        onOpenResearchInfo={() => setIsResearchModalOpen(true)}
-        pendingCount={pendingCount}
-        urgentCount={urgentCount}
-        currentUser={currentUser}
-        onOpenLogin={handleOpenLogin}
-        onLogout={handleLogout}
       />
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Global Header */}
+        <Header
+          onOpenTracker={handleOpenTracker}
+          onOpenResearchInfo={() => setIsResearchModalOpen(true)}
+          currentUser={currentUser}
+          onOpenLogin={handleOpenLogin}
+          onLogout={handleLogout}
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+        />
 
       {/* Main Content Area */}
       <main className="flex-1">
@@ -657,6 +658,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      </div>
 
       {/* MODALS */}
       <ComplaintDetailsModal

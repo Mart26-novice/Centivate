@@ -6,9 +6,7 @@ import {
   Search,
   CheckCircle2,
   ArrowRight,
-  Clock,
   Sparkles,
-  Award,
   BookOpen,
   Wrench,
   Building,
@@ -71,24 +69,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <p className="text-base sm:text-xl text-blue-100 font-medium leading-relaxed max-w-3xl mx-auto">
               Empowering CPU Centralians with a fast, transparent, and accountable facility complaint reporting system. Ensuring clean classrooms, working equipment, and safe learning environments.
             </p>
-          </div>
-
-          {/* Quick Stats Banner Pill */}
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 bg-blue-900/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-amber-400/30 text-xs font-bold text-amber-300 shadow-xl">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>{resolvedCount} Facility Repairs Resolved</span>
-            </div>
-            <span className="hidden sm:inline text-blue-600">•</span>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-amber-400" />
-              <span>24/48 Hr Emergency Response Target</span>
-            </div>
-            <span className="hidden sm:inline text-blue-600">•</span>
-            <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-400" />
-              <span>Capstone ISO 9001 Compliant</span>
-            </div>
           </div>
 
           {/* Call to Actions */}
