@@ -38,7 +38,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="space-y-12 pb-16 animate-fadeIn">
       {/* Hero Banner with CPU Aerial Campus Image */}
-      <section className="relative min-h-[500px] lg:min-h-[580px] bg-blue-950 text-white rounded-b-3xl sm:rounded-3xl overflow-hidden shadow-2xl border-b-4 border-amber-400 max-w-7xl mx-auto">
+      <section className="relative min-h-[500px] lg:min-h-[580px] bg-blue-950 text-white overflow-hidden">
         {/* Background Image overlay */}
         <div className="absolute inset-0 z-0">
           <img
