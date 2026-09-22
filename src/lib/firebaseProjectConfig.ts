@@ -4,16 +4,14 @@
 // JSON import only reliably resolves where a bundler inlines it, which
 // Vercel's per-file Node function builder for api/*.ts does not do).
 const firebaseProjectConfig = {
-  projectId: 'deductive-plate-q98sv',
-  appId: '1:956960380641:web:8f52d30449abe2b49409a0',
-  apiKey: 'AIzaSyCMvyyNAKMX8NSl6YEXCLoJmvTDsEhPbK0',
-  authDomain: 'deductive-plate-q98sv.firebaseapp.com',
-  firestoreDatabaseId: 'ai-studio-centivatecomplai-d4774356-59fb-4c53-844c-0c2db37bcdc7',
-  storageBucket: 'deductive-plate-q98sv.firebasestorage.app',
-  messagingSenderId: '956960380641',
-  measurementId: '',
-  oAuthClientId: '956960380641-a7jmn07eoogm0hu6lhpec4300brh9r63.apps.googleusercontent.com',
-  recaptchaSiteKey: '',
+  projectId: 'centivate-prod',
+  appId: '1:881337132646:web:bb7d64dc68cb75a6d5afa7',
+  apiKey: 'AIzaSyCcYhr31akpbkBX6U6A74_B_DGmvtyeuiY',
+  authDomain: 'centivate-prod.firebaseapp.com',
+  firestoreDatabaseId: '(default)',
+  storageBucket: 'centivate-prod.firebasestorage.app',
+  messagingSenderId: '881337132646',
+  measurementId: 'G-7BEFBM8BTF',
 };
 
 export default firebaseProjectConfig;
