@@ -25,7 +25,7 @@ app.use(async (req, _res, next) => {
   if (authHeader && authHeader.startsWith('Bearer ') && hasFirebaseAdminCredentials) {
     const token = authHeader.split('Bearer ')[1];
     try {
-      const decoded = await getAdminAuth().verifyIdToken(token);
+      const decoded = await (await getAdminAuth()).verifyIdToken(token);
       (req as any).user = decoded;
     } catch (err) {
       // Non-blocking warning for optional auth tokens
@@ -55,7 +55,7 @@ async function isAdminUser(decoded: any): Promise<boolean> {
   }
   if (decoded?.uid && hasFirebaseAdminCredentials) {
     try {
-      const userDoc = await getAdminDb().collection('users').doc(decoded.uid).get();
+      const userDoc = await (await getAdminDb()).collection('users').doc(decoded.uid).get();
       if (userDoc.exists && (userDoc.data() as any)?.role === 'admin') {
         return true;
       }
@@ -75,7 +75,7 @@ async function requireAuthOrAdmin(req: express.Request, res: express.Response, n
   if (authHeader && authHeader.startsWith('Bearer ') && hasFirebaseAdminCredentials) {
     const token = authHeader.split('Bearer ')[1];
     try {
-      const decoded = await getAdminAuth().verifyIdToken(token);
+      const decoded = await (await getAdminAuth()).verifyIdToken(token);
       (req as any).user = decoded;
       if (await isAdminUser(decoded)) {
         return next();
@@ -125,12 +125,12 @@ let memoryStaff: MaintenanceStaff[] = JSON.parse(JSON.stringify(INITIAL_STAFF));
 async function getComplaintsFromFirestore(): Promise<Complaint[]> {
   if (!hasFirebaseAdminCredentials) return memoryComplaints;
   try {
-    const colRef = getAdminDb().collection(COMPLAINTS_COL);
+    const colRef = (await getAdminDb()).collection(COMPLAINTS_COL);
     const snapshot = await colRef.get();
     if (snapshot.empty) {
-      const batch = getAdminDb().batch();
+      const batch = (await getAdminDb()).batch();
       for (const item of INITIAL_COMPLAINTS) {
-        batch.set(getAdminDb().collection(COMPLAINTS_COL).doc(item.id), item);
+        batch.set((await getAdminDb()).collection(COMPLAINTS_COL).doc(item.id), item);
       }
       await batch.commit().catch(() => {});
       return memoryComplaints;
@@ -151,12 +151,12 @@ async function getComplaintsFromFirestore(): Promise<Complaint[]> {
 async function getSurveysFromFirestore(): Promise<SurveyResponse[]> {
   if (!hasFirebaseAdminCredentials) return memorySurveys;
   try {
-    const colRef = getAdminDb().collection(SURVEYS_COL);
+    const colRef = (await getAdminDb()).collection(SURVEYS_COL);
     const snapshot = await colRef.get();
     if (snapshot.empty) {
-      const batch = getAdminDb().batch();
+      const batch = (await getAdminDb()).batch();
       for (const item of INITIAL_SURVEYS) {
-        batch.set(getAdminDb().collection(SURVEYS_COL).doc(item.id), item);
+        batch.set((await getAdminDb()).collection(SURVEYS_COL).doc(item.id), item);
       }
       await batch.commit().catch(() => {});
       return memorySurveys;
@@ -176,12 +176,12 @@ async function getSurveysFromFirestore(): Promise<SurveyResponse[]> {
 async function getStaffFromFirestore(): Promise<MaintenanceStaff[]> {
   if (!hasFirebaseAdminCredentials) return memoryStaff;
   try {
-    const colRef = getAdminDb().collection(STAFF_COL);
+    const colRef = (await getAdminDb()).collection(STAFF_COL);
     const snapshot = await colRef.get();
     if (snapshot.empty) {
-      const batch = getAdminDb().batch();
+      const batch = (await getAdminDb()).batch();
       for (const item of INITIAL_STAFF) {
-        batch.set(getAdminDb().collection(STAFF_COL).doc(item.id), item);
+        batch.set((await getAdminDb()).collection(STAFF_COL).doc(item.id), item);
       }
       await batch.commit().catch(() => {});
       return memoryStaff;
@@ -261,7 +261,7 @@ app.post('/api/auth/profile', async (req, res) => {
   let decoded: any;
   try {
     const token = authHeader.split('Bearer ')[1];
-    decoded = await getAdminAuth().verifyIdToken(token);
+    decoded = await (await getAdminAuth()).verifyIdToken(token);
   } catch (_err) {
     return res.status(401).json({ error: 'Invalid or expired authentication token.' });
   }
@@ -282,7 +282,7 @@ app.post('/api/auth/profile', async (req, res) => {
   }
 
   try {
-    await getAdminDb().collection('users').doc(decoded.uid).set(
+    await (await getAdminDb()).collection('users').doc(decoded.uid).set(
       {
         email: decoded.email || '',
         role,
@@ -513,7 +513,7 @@ Provide a short urgency reason, a recommended maintenance action plan, and wheth
     memoryComplaints.unshift(newComplaint);
 
     try {
-      await getAdminDb().collection(COMPLAINTS_COL).doc(newComplaint.id).set(newComplaint);
+      await (await getAdminDb()).collection(COMPLAINTS_COL).doc(newComplaint.id).set(newComplaint);
     } catch (_dbErr: any) {
       // In-memory fallback persisted successfully
     }
@@ -552,7 +552,7 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
 
     if (!item) {
       try {
-        const docRef = getAdminDb().collection(COMPLAINTS_COL).doc(id);
+        const docRef = (await getAdminDb()).collection(COMPLAINTS_COL).doc(id);
         const docSnap = await docRef.get();
         if (docSnap.exists) {
           item = docSnap.data() as Complaint;
@@ -601,7 +601,7 @@ app.patch('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
     item.updatedAt = now;
 
     try {
-      await getAdminDb().collection(COMPLAINTS_COL).doc(id).set(item);
+      await (await getAdminDb()).collection(COMPLAINTS_COL).doc(id).set(item);
     } catch (_dbErr: any) {}
 
     // Notify the newly assigned staff member by email, best-effort, without
@@ -637,7 +637,7 @@ app.delete('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
 
     if (!item) {
       try {
-        const docRef = getAdminDb().collection(COMPLAINTS_COL).doc(id);
+        const docRef = (await getAdminDb()).collection(COMPLAINTS_COL).doc(id);
         const docSnap = await docRef.get();
         if (docSnap.exists) {
           item = docSnap.data() as Complaint;
@@ -653,7 +653,7 @@ app.delete('/api/complaints/:id', requireAuthOrAdmin, async (req, res) => {
     item.updatedAt = new Date().toISOString();
 
     try {
-      await getAdminDb().collection(COMPLAINTS_COL).doc(id).set(item);
+      await (await getAdminDb()).collection(COMPLAINTS_COL).doc(id).set(item);
     } catch (_dbErr: any) {}
 
     res.json({ message: 'Complaint archived successfully', id });
@@ -821,7 +821,7 @@ app.post('/api/surveys', async (req, res) => {
   memorySurveys.push(newSurvey);
 
   try {
-    await getAdminDb().collection(SURVEYS_COL).doc(newSurvey.id).set(newSurvey);
+    await (await getAdminDb()).collection(SURVEYS_COL).doc(newSurvey.id).set(newSurvey);
   } catch (_err: any) {}
 
   res.status(201).json(newSurvey);
@@ -867,7 +867,7 @@ app.post('/api/staff', requireAuthOrAdmin, async (req, res) => {
   memoryStaff.push(newStaff);
 
   try {
-    await getAdminDb().collection(STAFF_COL).doc(newStaff.id).set(newStaff);
+    await (await getAdminDb()).collection(STAFF_COL).doc(newStaff.id).set(newStaff);
   } catch (_err: any) {}
 
   res.status(201).json(newStaff);
@@ -882,7 +882,7 @@ app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
 
     if (!currentStaff) {
       try {
-        const docRef = getAdminDb().collection(STAFF_COL).doc(id);
+        const docRef = (await getAdminDb()).collection(STAFF_COL).doc(id);
         const docSnap = await docRef.get();
         if (docSnap.exists) {
           currentStaff = docSnap.data() as MaintenanceStaff;
@@ -903,7 +903,7 @@ app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
         if (c.assignedStaff && c.assignedStaff.trim().toLowerCase() === currentName.toLowerCase()) {
           c.assignedStaff = updatedName;
           try {
-            await getAdminDb().collection(COMPLAINTS_COL).doc(c.id).set(c);
+            await (await getAdminDb()).collection(COMPLAINTS_COL).doc(c.id).set(c);
           } catch (_e) {}
         }
       }
@@ -921,7 +921,7 @@ app.patch('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
     if (idx !== -1) memoryStaff[idx] = updatedStaff;
 
     try {
-      await getAdminDb().collection(STAFF_COL).doc(id).set(updatedStaff);
+      await (await getAdminDb()).collection(STAFF_COL).doc(id).set(updatedStaff);
     } catch (_err: any) {}
 
     res.json(updatedStaff);
@@ -938,7 +938,7 @@ app.delete('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
 
     if (!removed) {
       try {
-        const docRef = getAdminDb().collection(STAFF_COL).doc(id);
+        const docRef = (await getAdminDb()).collection(STAFF_COL).doc(id);
         const docSnap = await docRef.get();
         if (docSnap.exists) {
           removed = docSnap.data() as MaintenanceStaff;
@@ -953,7 +953,7 @@ app.delete('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
     memoryStaff = memoryStaff.filter((s) => s.id !== id);
 
     try {
-      await getAdminDb().collection(STAFF_COL).doc(id).delete();
+      await (await getAdminDb()).collection(STAFF_COL).doc(id).delete();
     } catch (_err: any) {}
 
     const complaints = await getComplaintsFromFirestore();
@@ -966,7 +966,7 @@ app.delete('/api/staff/:id', requireAuthOrAdmin, async (req, res) => {
       ) {
         c.assignedStaff = '';
         try {
-          await getAdminDb().collection(COMPLAINTS_COL).doc(c.id).set(c);
+          await (await getAdminDb()).collection(COMPLAINTS_COL).doc(c.id).set(c);
         } catch (_e) {}
       }
     }

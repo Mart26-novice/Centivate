@@ -1,6 +1,6 @@
-import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
-import { getAuth, type Auth } from 'firebase-admin/auth';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import type { App } from 'firebase-admin/app';
+import type { Auth } from 'firebase-admin/auth';
+import type { Firestore } from 'firebase-admin/firestore';
 import firebaseConfig from './firebaseProjectConfig.js';
 
 // Outside GCP (Vercel, local dev, etc.) there is no ambient metadata server
@@ -22,14 +22,16 @@ if (!serviceAccountKeyJson) {
   );
 }
 
-// initializeApp/getAuth/getFirestore are constructed lazily (only on first
-// actual use inside a route handler) rather than at module scope, so that
-// routes which never touch Firestore/Auth — like a plain health check — are
-// never blocked by that construction, whatever project/credential state it
-// ends up probing.
+// firebase-admin's app/auth/firestore submodules (and their transitive deps
+// - jwks-rsa, google-auth-library, gRPC, ...) are imported dynamically,
+// inside these functions, rather than statically at the top of the file.
+// A route that never calls getAdminAuth()/getAdminDb() - a plain health
+// check, for instance - should never pay for loading that dependency chain
+// or whatever it does on load, only for actually using it.
 let cachedApp: App | undefined;
-function getFirebaseApp(): App {
+async function getFirebaseApp(): Promise<App> {
   if (cachedApp) return cachedApp;
+  const { initializeApp, getApps, cert } = await import('firebase-admin/app');
   cachedApp = !getApps().length
     ? initializeApp(
         serviceAccountKeyJson
@@ -41,16 +43,21 @@ function getFirebaseApp(): App {
 }
 
 let cachedAuth: Auth | undefined;
-export function getAdminAuth(): Auth {
-  if (!cachedAuth) cachedAuth = getAuth(getFirebaseApp());
+export async function getAdminAuth(): Promise<Auth> {
+  if (!cachedAuth) {
+    const { getAuth } = await import('firebase-admin/auth');
+    cachedAuth = getAuth(await getFirebaseApp());
+  }
   return cachedAuth;
 }
 
 let cachedDb: Firestore | undefined;
-export function getAdminDb(): Firestore {
+export async function getAdminDb(): Promise<Firestore> {
   if (!cachedDb) {
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const app = await getFirebaseApp();
     const dbId = firebaseConfig.firestoreDatabaseId;
-    cachedDb = dbId && dbId !== '(default)' ? getFirestore(getFirebaseApp(), dbId) : getFirestore(getFirebaseApp());
+    cachedDb = dbId && dbId !== '(default)' ? getFirestore(app, dbId) : getFirestore(app);
   }
   return cachedDb;
 }
