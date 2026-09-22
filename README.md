@@ -6,28 +6,40 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
 
 ## 🌟 Key Features
 
-1. **Student Complaint Filing Portal**
+1. **Real Self-Service Authentication**
+   - Firebase Auth signup/login for three roles — **student**, **teacher**, **admin** — no institutional email domain required, so pilot respondents can join with any personal email.
+   - Signup is gated by an access code: a `SIGNUP_ACCESS_CODE` handed to student/teacher respondents, and a separate, stronger `ADMIN_SIGNUP_CODE` kept private by the research team.
+   - Role is written server-side only (`POST /api/auth/profile`, via the Firebase Admin SDK) — `firestore.rules` blocks client writes to `users/{uid}` entirely, so a signed-in user can never self-assign `role: "admin"`.
+
+2. **Student Complaint Filing Portal**
    - Public submission form with client & server validation (Title, Description, Category, Building, Room, Photo Uploads).
    - Anonymous reporting option or full student identification (Strand, Contact Email).
    - Image upload payload size & MIME-type restriction (compression to <500KB JPEG/PNG/WEBP).
 
-2. **Real-time Complaint Tracker**
+3. **Real-time Complaint Tracker**
    - High-entropy tracking code generation (`CENT-2026-XXXXXX`) preventing code collisions and brute-force guessing.
    - Public single-document lookup via `/api/complaints/track/:code` endpoint.
    - Full status history and audit log visualization.
 
-3. **Admin & Maintenance Management Dashboard**
+4. **Admin & Maintenance Management Dashboard**
    - Filter, search, assign, resolve, or archive facility complaints.
-   - Role-gated maintenance staff workload management.
+   - Role-gated maintenance staff workload management, including a per-staff notification email.
    - Live AI Analysis trigger for automated priority elevation upon safety hazard detection.
+   - Collapsible left sidebar (desktop: icon-only or labeled, remembers your preference; mobile: slide-in drawer) for switching between Work Orders, Technicians, and the Student Directory without leaving the page.
 
-4. **AI-Assisted Complaint Diagnosis (Gemini 3.6 Flash)**
+5. **Staff Assignment Email Notifications (Resend)**
+   - When an admin assigns a complaint to a maintenance staff member, the server emails that staff member automatically via [Resend](https://resend.com) — best-effort, and silently skipped if `RESEND_API_KEY` isn't configured.
+
+6. **AI-Assisted Complaint Diagnosis (Gemini 3.6 Flash)**
    - Automatically analyzes complaint titles and descriptions.
    - Recommends appropriate maintenance actions and evaluates safety hazard risks (electrical, water leak, structural).
    - Auto-elevates ticket priority to 'High' or 'Urgent / Hazard' when safety hazards are flagged.
 
-5. **System Usability Scale (SUS) Survey**
+7. **System Usability Scale (SUS) Survey**
    - Embedded survey collection for research data gathering and campus satisfaction metrics.
+
+8. **App-wide Collapsible Sidebar Navigation**
+   - The whole app (Home, Student Portal, Admin Dashboard, Analytics & Research) is navigated through a single left sidebar — desktop-persistent and collapsible, mobile slide-in drawer — instead of a header nav bar, keeping the header itself limited to branding, tracking search, and login/logout.
 
 ---
 
@@ -35,12 +47,14 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend** | React 18, TypeScript, Tailwind CSS, Lucide React, Framer Motion |
+| **Frontend** | React 19, TypeScript, Tailwind CSS, Lucide React, Framer Motion |
 | **Backend API** | Node.js, Express, TypeScript |
 | **AI Integration** | `@google/genai` SDK with `gemini-3.6-flash` |
 | **Database & Auth** | Firebase Firestore, Firebase Auth, `firebase-admin` SDK |
-| **Security** | Firestore Security Rules (`firestore.rules`), Token Verification Middleware |
+| **Email** | [Resend](https://resend.com) — staff assignment notifications |
+| **Security** | Firestore Security Rules (`firestore.rules`), Firebase ID Token + role verification middleware |
 | **Testing** | Vitest (`vitest run`), TypeScript Type Checking (`tsc --noEmit`) |
+| **Deployment** | Vercel (serverless Node functions) |
 
 ---
 
@@ -74,8 +88,10 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
 ```
 
 ### Security Measures Implemented
-- **Firestore Security Rules**: Single-document read (`get`) is permitted for public tracking lookups; bulk list operations (`list`) and sensitive collections (`staff`, `students`, `surveys`) require authenticated credentials (`isEmailAuth()`). Mutation/Deletion is restricted to administrative roles (`isAdmin()`).
-- **Server API Authorization**: Mutating API endpoints (`PATCH`, `DELETE` for complaints; `POST`, `PATCH`, `DELETE` for staff) verify Firebase ID Tokens (`firebase-admin`) or authenticated admin session tokens.
+- **Firestore Security Rules**: Single-document read (`get`) is permitted for public tracking lookups; bulk list operations (`list`) and sensitive collections (`staff`, `students`, `surveys`) require authenticated credentials (`isEmailAuth()`). Updating or deleting a complaint, and all writes to `staff`/`students`, require `isAdmin()` — a signed-in non-admin user can no longer edit someone else's ticket. The `users` collection (where role assignment lives) is entirely client-write-blocked (`allow write: if false`).
+- **Server API Authorization**: Mutating API endpoints (`PATCH`, `DELETE` for complaints; `POST`, `PATCH`, `DELETE` for staff) verify a Firebase ID Token *and* that the token belongs to an admin (`role: "admin"` in `users/{uid}`, or an allowlisted email) — a valid token from a non-admin account is rejected with `403`, not silently treated as authorized.
+- **Role assignment is server-only**: the only way a `users/{uid}` document gets written is `POST /api/auth/profile`, which requires a verified ID token *and* the correct access code for the requested role (a separate, stronger code for `admin`). This prevents a signed-in user from ever self-assigning admin privileges via the client SDK.
+- **Local-dev-only auth bypass**: `x-admin-authorization` is honored only when `NODE_ENV !== 'production'` and matches `ADMIN_DEV_BYPASS_TOKEN` — never set that variable in a production environment.
 - **Input & File Payload Validation**: Server-side string length caps (e.g., Description 10–5000 chars) and base64 image MIME type check (`data:image/jpeg`, `data:image/png`, `data:image/webp`, `<500KB`).
 
 ---
@@ -100,15 +116,23 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
    cp .env.example .env
    ```
    Key variables:
-   - `GEMINI_API_KEY`: API key for Google Gemini model inference.
-   - `GOOGLE_CLOUD_PROJECT`: Google Cloud / Firebase Project ID.
+   - `GEMINI_API_KEY`: API key for Google Gemini model inference. Optional — AI diagnosis gracefully falls back to keyword-based heuristics if unset.
+   - `FIREBASE_SERVICE_ACCOUNT_KEY`: **Required for any server-side Firestore/Auth call to work** (signup, login profile lookup, admin writes). The full JSON contents of a Firebase Console → Project Settings → Service Accounts → *Generate new private key* download, as **one env var value** — not a file path. Without it, the app still runs and GET routes fall back to in-memory seed data, but signup/login and all writes are disabled (mutation endpoints return `503`).
+     > **Vercel-specific gotcha we hit in practice**: pasting multi-line JSON into Vercel's dashboard "Value" field is prone to silent corruption (stray quotes, a BOM character, etc.) that only surfaces as a cryptic `verifyIdToken` JSON parse error at runtime. Prefer setting it via the CLI with file redirection instead of a pipe or the web UI textarea: `vercel env add FIREBASE_SERVICE_ACCOUNT_KEY production < path\to\key.json` (Windows: use `cmd /c "vercel env add ... < path\to\key.json"` — PowerShell's pipe operator injects a UTF-8 BOM that also breaks this).
+   - `SIGNUP_ACCESS_CODE` / `ADMIN_SIGNUP_CODE`: gate self-service signup for student/teacher and admin respectively — see `.env.example` for details. Required for `POST /api/auth/profile` to ever succeed.
+   - `RESEND_API_KEY` / `RESEND_FROM_EMAIL`: optional — enables the staff assignment email notification. Free tier at [resend.com](https://resend.com); `RESEND_FROM_EMAIL` can be left as the default sandbox address (`onboarding@resend.dev`), no domain verification needed.
+   - `ADMIN_DEV_BYPASS_TOKEN`: local development only, never set in production — see `.env.example`.
 
-3. **Database Security Rules Deployment:**
+   See `.env.example` for the full list with detailed comments.
+
+3. **Firebase Project Setup:**
+   This repo's client config (`src/lib/firebaseProjectConfig.ts`) and `.firebaserc` point at a specific Firebase project — swap both if you're standing up your own. Note: an AI-Studio-provisioned Firebase project may have an **organization policy that blocks service account key creation entirely** (`constraints/iam.disableServiceAccountKeyCreation`, non-negotiable regardless of billing plan or IAM role) — if `gcloud iam service-accounts keys create` fails with `FAILED_PRECONDITION`, you'll need a normal, self-created Firebase project instead (Firebase Console → Add project), which has no such restriction.
+
    Deploy `firestore.rules` to your Firebase project:
    ```bash
-   # Deploy via Firebase CLI or AI Studio deploy tool
    firebase deploy --only firestore:rules
    ```
+   (Requires `firebase login` once; the target project comes from `.firebaserc`, or pass `--project <id>` explicitly.)
 
 4. **Start Development Server:**
    ```bash
@@ -124,6 +148,16 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
 ---
 
 ## 📡 REST API Reference
+
+> Full details, request/response shapes, and error cases: [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md).
+
+### 0. Authentication
+
+#### `POST /api/auth/profile`
+Completes signup for a Firebase Auth account created client-side, by writing its `users/{uid}` Firestore profile (role + name) — the *only* path that document can be written through, since `firestore.rules` blocks client writes to it entirely.
+- **Access**: Requires `Authorization: Bearer <Firebase_ID_Token>` for the just-created account, plus the correct access code (`SIGNUP_ACCESS_CODE` for student/teacher, `ADMIN_SIGNUP_CODE` for admin) in the request body.
+
+---
 
 ### 1. Complaints API
 
@@ -175,11 +209,12 @@ File a new complaint.
 
 #### `PATCH /api/complaints/:id`
 Update complaint status, assign staff, or record resolution notes.
-- **Access**: Authenticated Staff / Admin (`Authorization: Bearer <token>`)
+- **Access**: Admin only (`Authorization: Bearer <token>` for an account with `role: "admin"`).
+- Assigning a new `assignedStaff` value triggers a best-effort Resend email to that staff member, if they have a notification email on file.
 
 #### `DELETE /api/complaints/:id`
 Archive a complaint.
-- **Access**: Authenticated Admin (`Authorization: Bearer <token>`)
+- **Access**: Admin only (`Authorization: Bearer <token>` for an account with `role: "admin"`).
 
 ---
 
@@ -216,9 +251,11 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 
 ```
 .
-├── api/                             # Server Express API handlers
+├── api/                             # Server Express API handlers (Vercel serverless entry)
+│   ├── lib/
+│   │   └── email.ts                 # Resend staff-assignment email helper
 │   ├── app.ts                       # Express REST endpoints & middleware
-│   └── index.ts                     # API module entry point
+│   └── index.ts                     # Vercel Node function entry point (exports the Express app directly)
 ├── docs/                            # Documentation
 │   └── API_REFERENCE.md             # REST API reference guide
 ├── public/                          # Static public assets
@@ -229,42 +266,47 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 │   │   ├── complaintHelpers.test.ts
 │   │   └── initialData.test.ts
 │   ├── components/                  # UI React components & modals
-│   │   ├── AdminDashboard.tsx       # Admin & staff workload management dashboard
+│   │   ├── AdminDashboard.tsx       # Admin dashboard, with its own collapsible internal sidebar
 │   │   ├── AnalyticsView.tsx        # System analytics & SUS survey charts
+│   │   ├── AppSidebar.tsx           # App-wide collapsible left nav (Home/Student/Admin/Analytics)
 │   │   ├── ComplaintDetailsModal.tsx# Detailed ticket view & audit logs modal
-│   │   ├── Header.tsx               # Primary header navigation & tracking search bar
+│   │   ├── Header.tsx               # Branding, tracking search, login/logout (nav lives in AppSidebar)
 │   │   ├── IntroOverlay.tsx         # Session intro/loading screen overlay
 │   │   ├── LandingPage.tsx          # Public campus overview & quick action hub
-│   │   ├── LoginModal.tsx           # Authentication modal for students & admins
+│   │   ├── LoginModal.tsx           # Real Firebase Auth login / role-gated signup modal
 │   │   ├── PhotoUploadModal.tsx     # Compressed photo attachment handler
 │   │   ├── PrintableReportModal.tsx # Printable PDF/print report layout
 │   │   ├── PublicTracker.tsx        # Single-complaint tracking lookup view
 │   │   ├── ResearchInfoModal.tsx    # Academic research background & SUS survey modal
 │   │   └── StudentPortal.tsx        # Complaint filing form & history portal
 │   ├── data/                        # Static seed & preset data
-│   │   ├── authData.ts              # Preset user credentials
+│   │   ├── authData.ts              # Preset display data (demo-fill helpers only, not real credentials)
 │   │   └── initialData.ts           # Demo campus complaints, staff & survey seeds
-│   ├── db/                          # Database configuration
+│   ├── db/                          # Unused Postgres/Drizzle schema (not wired into the app; kept for reference)
 │   │   ├── drizzle.config.ts
 │   │   ├── index.ts
-│   │   └── schema.ts                # TypeScript Drizzle database schema
+│   │   └── schema.ts
 │   ├── lib/                         # Integration clients & SDKs
-│   │   ├── firebase-admin.ts        # Server-side Firebase Admin SDK initialization
+│   │   ├── firebase-admin.ts        # Server-side Firebase Admin SDK — lazy init, explicit credentials
 │   │   ├── firebase.ts              # Client-side Firebase App SDK initialization
+│   │   ├── firebaseProjectConfig.ts # Public Firebase web config (plain TS module, not a JSON import)
 │   │   └── firestoreService.ts      # Real-time Firestore subscriptions & CRUD helpers
 │   ├── utils/                       # Helper & utility functions
 │   │   └── complaintHelpers.ts      # Tracking code generator, search & stats computers
-│   ├── App.tsx                      # Root application component & global state
+│   ├── App.tsx                      # Root application component, global state, app-shell layout
 │   ├── index.css                    # Tailwind CSS imports & global styles
 │   ├── main.tsx                     # React DOM entry point
 │   └── types.ts                     # TypeScript interfaces, types & enums
-├── .env.example                     # Environment variables template
-├── firebase-applet-config.json      # Client Firebase configuration
+├── .claude/launch.json              # Dev server config for local preview tooling
+├── .env.example / env.example       # Environment variables template
+├── .firebaserc                      # Default Firebase CLI project target
+├── firebase.json                    # Firebase CLI config (points at firestore.rules)
+├── firebase-applet-config.json      # Original AI-Studio-issued Firebase config (superseded by firebaseProjectConfig.ts for the app itself; kept for reference)
 ├── firebase-blueprint.json          # Firestore collection blueprint schema
 ├── firestore.rules                  # Firestore security rules
 ├── metadata.json                    # Application metadata & permissions
 ├── package.json                     # Dependencies & build scripts
-├── server.ts                        # Main server entry point (Express + Vite)
+├── server.ts                        # Local/non-Vercel server entry point (Express + Vite)
 ├── tsconfig.json                    # TypeScript compiler options
 └── vite.config.ts                   # Vite bundler configuration
 ```
@@ -274,8 +316,10 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 ## 📁 Project Configuration Files
 
 - `metadata.json`: Contains application name, description, frame permissions, and server capabilities.
-- `firebase-applet-config.json`: Platform web config containing Firebase project identification and client keys.
-- `firestore.rules`: Security rules enforcing authorization boundaries on Firestore collections.
+- `src/lib/firebaseProjectConfig.ts`: **The actual, live** Firebase web config the app uses (client and server both import it). A plain TS module rather than a JSON import deliberately — a static JSON import only reliably resolves where a bundler inlines it, which Vercel's per-file Node function builder for `api/*.ts` does not do.
+- `firebase-applet-config.json`: The original AI-Studio-issued config. No longer read by the app itself; kept for reference / in case you're diffing against the original AI Studio export.
+- `firestore.rules`: Security rules enforcing authorization boundaries on Firestore collections. Deploy changes with `firebase deploy --only firestore:rules` — editing this file alone does **not** update what's live.
+- `firebase.json` / `.firebaserc`: Firebase CLI config — what `firebase deploy` actually deploys (`firestore.rules`) and which project it targets by default.
 - `firebase-blueprint.json`: Initial blueprint schema definition for provisioned collections.
 
 ---
@@ -285,5 +329,6 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 When presenting CentIvate for academic defense or technical evaluation, note these intentional architectural scope decisions:
 
 1. **Inline Photo Attachments**: Photos are currently stored as compressed base64 strings in Firestore documents (<500KB). Production recommendation is migrating to Google Cloud Storage / Firebase Storage buckets for high-resolution attachments.
-2. **Authentication Domain Restriction**: Current authentication supports Firebase Auth and administrative fallback session verification. Production enterprise rollout recommends SSO SAML/OAuth restriction strictly to `@cpu.edu.ph` institutional accounts.
+2. **Open Self-Service Signup, Not Institutional SSO**: Authentication is real Firebase Auth, gated by a shared access code rather than restricted to `@cpu.edu.ph` accounts — a deliberate pilot-scope decision so respondents can participate with any personal email, without needing institutional domain access. Production enterprise rollout should replace the access-code gate with SSO/SAML restricted to institutional accounts.
 3. **Multi-tenant Expansion**: Built for single-institution campus deployment (Central Philippine University SHS). Multi-campus support requires tenant partitioning in Firestore schemas.
+4. **Staff Notification Emails Are Best-Effort**: Resend delivery isn't guaranteed or retried — for a production deployment beyond a research pilot, pair it with an in-app notification or a delivery-status check.

@@ -14,8 +14,36 @@ This document describes all Express backend API endpoints provided by `/api/app.
 | Header | Type | Description |
 | :--- | :--- | :--- |
 | `Content-Type` | `application/json` | Required for `POST` and `PATCH` requests |
-| `Authorization` | `Bearer <Firebase_ID_Token>` | Required for administrative mutation endpoints |
-| `x-admin-authorization` | `string` | Administrative session token fallback |
+| `Authorization` | `Bearer <Firebase_ID_Token>` | Required for administrative mutation endpoints. The token must belong to an account whose Firestore `users/{uid}` doc has `role: "admin"` (or whose email is in the server's admin allowlist) — a signed-in non-admin user is rejected with `403`, not just anyone who is logged in. |
+| `x-admin-authorization` | `string` | **Local development only.** Only honored when `NODE_ENV !== 'production'` and must match the server's `ADMIN_DEV_BYPASS_TOKEN` env var. Never set this in production — there is no fallback in production; a missing/invalid Bearer token is simply rejected. |
+
+Requests to mutation endpoints (`PATCH`/`DELETE` on complaints, `POST`/`PATCH`/`DELETE` on staff) fail with `503` if the server has no `FIREBASE_SERVICE_ACCOUNT_KEY` configured — see the main README's environment variable list.
+
+---
+
+### Account Setup — `POST /api/auth/profile`
+Completes signup for an account already created client-side via Firebase Auth (`createUserWithEmailAndPassword`). This is the *only* path that writes a `users/{uid}` Firestore document — `firestore.rules` blocks client writes to that collection entirely, specifically to prevent a signed-in user from self-assigning `role: "admin"`.
+
+**Headers:** `Authorization: Bearer <Firebase_ID_Token>` required (the token for the account just created).
+
+**Request Body:**
+```json
+{
+  "accessCode": "the-code-given-to-the-respondent",
+  "role": "student",
+  "fullName": "Juan Dela Cruz",
+  "strandOrDepartment": "STEM 12-A"
+}
+```
+- `role`: one of `student`, `teacher`, `admin`.
+- `accessCode`: checked against `SIGNUP_ACCESS_CODE` (student/teacher) or `ADMIN_SIGNUP_CODE` (admin) — a separate, stronger code kept private by the research team.
+
+**Response (200 OK):**
+```json
+{ "success": true, "role": "student" }
+```
+
+**Error responses:** `401` missing/invalid token, `400` invalid role or missing full name, `403` wrong access code, `503` server has no Firebase Admin credentials configured.
 
 ---
 
@@ -140,6 +168,8 @@ Update complaint status, staff assignment, or resolution notes.
 
 **Response (200 OK):** Updated `Complaint` object.
 
+**Side effect:** if `assignedStaff` changes to a new, non-empty value, the server looks up that staff member's notification email (`staff.email`, set via `POST`/`PATCH /api/staff`) and sends them an assignment email through Resend. This is best-effort — it never blocks or fails the request, and is silently skipped if `RESEND_API_KEY` isn't configured or the staff member has no email on file.
+
 ---
 
 #### `DELETE /api/complaints/:id`
@@ -173,9 +203,11 @@ Add a maintenance staff member.
   "name": "Jose Rizal",
   "role": "Senior Electrician",
   "specialty": "Lighting & Electrical",
-  "phone": "0917-123-4567"
+  "phone": "0917-123-4567",
+  "email": "jose.rizal.centivate@gmail.com"
 }
 ```
+`email` is optional — when set, this staff member receives a Resend notification email whenever a complaint is assigned to them (see `PATCH /api/complaints/:id`).
 
 #### `PATCH /api/staff/:id`
 Update staff profile.
