@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Complaint, ComplaintStatus } from '../types';
 import campusBg from '../assets/images/cpu_campus_aerial.jpg';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface PublicTrackerProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
   initialCode = '',
   complaints = [],
 }) => {
+  useEscapeKey(isOpen, onClose);
   const [code, setCode] = useState(initialCode);
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [loading, setLoading] = useState(false);
@@ -160,7 +162,8 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-blue-200 hover:text-white p-1 rounded-lg hover:bg-blue-800 transition-colors"
+            aria-label="Close dialog"
+            className="text-blue-200 hover:text-white p-2 rounded-lg hover:bg-blue-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

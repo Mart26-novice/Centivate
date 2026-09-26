@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Printer, X, Download, GraduationCap, CheckCircle2, FileText, Award, ExternalLink } from 'lucide-react';
 import { SystemStats, Complaint } from '../types';
 import { computeStatsFromComplaints } from '../utils/complaintHelpers';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface PrintableReportModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
   stats: propsStats,
   complaints,
 }) => {
+  useEscapeKey(isOpen, onClose);
   const effectiveStats = useMemo(() => {
     if (
       propsStats &&
@@ -257,6 +259,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
             </button>
             <button
               onClick={onClose}
+              aria-label="Close dialog"
               className="p-2 text-slate-300 hover:text-white hover:bg-blue-900 rounded-lg transition-colors ml-2"
             >
               <X className="w-5 h-5" />

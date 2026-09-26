@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Complaint, ComplaintStatus, ComplaintPriority, MaintenanceStaff } from '../types';
 import campusBg from '../assets/images/cpu_campus_aerial.jpg';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface ComplaintDetailsModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
   onArchiveComplaint,
   isAdminView = true,
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen || !complaint) return null;
 
   const [status, setStatus] = useState<ComplaintStatus>(complaint.status);
@@ -188,7 +190,8 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="text-blue-200 hover:text-white p-1 rounded-lg hover:bg-blue-800 transition-colors"
+              aria-label="Close dialog"
+              className="text-blue-200 hover:text-white p-2 rounded-lg hover:bg-blue-800 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>

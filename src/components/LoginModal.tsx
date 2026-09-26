@@ -22,6 +22,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import campusBg from '../assets/images/cpu_campus_aerial.jpg';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -61,6 +62,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onLoginSuccess,
   onOpenTracker,
 }) => {
+  useEscapeKey(isOpen, onClose);
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [signupRole, setSignupRole] = useState<SignupRole>(initialRole === 'admin' ? 'admin' : 'student');
   const [fullName, setFullName] = useState<string>('');
@@ -278,9 +280,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
               <button
                 onClick={onClose}
+                aria-label="Close dialog"
                 className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 flex items-center justify-center font-bold text-sm transition-colors"
                 title="Close Modal"
-                aria-label="Close dialog"
               >
                 ✕
               </button>

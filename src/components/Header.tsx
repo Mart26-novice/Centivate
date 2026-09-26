@@ -67,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Main Header Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         {/* Mobile: menu trigger + brand */}
-        <div className="flex md:hidden items-center gap-2.5 shrink-0">
+        <div className="flex lg:hidden items-center gap-2.5 shrink-0">
           <button
             onClick={onOpenMobileNav}
             className="p-2 rounded-lg bg-blue-950/90 border border-blue-800/80 text-amber-300 hover:bg-blue-900 transition-colors"
@@ -83,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Desktop: brand */}
-        <div className="hidden md:flex items-center gap-2.5 md:gap-3.5 shrink-0">
+        <div className="hidden lg:flex items-center gap-2.5 md:gap-3.5 shrink-0">
           <div className="relative group shrink-0">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-amber-400 text-blue-950 flex items-center justify-center font-black text-2xl shadow-md border-2 border-amber-300">
               <ShieldAlert className="w-6 h-6 md:w-7 md:h-7 text-blue-950" />
@@ -106,13 +106,14 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Desktop: search + auth */}
-        <div className="hidden md:flex flex-wrap items-center gap-3 lg:gap-4">
+        <div className="hidden lg:flex flex-wrap items-center gap-3 lg:gap-4">
           {/* Search Tracker Quick Form */}
           <form onSubmit={handleSearchSubmit} className="flex items-center">
             <div className="relative w-56 lg:w-72">
               <input
                 type="text"
                 placeholder="Track code (e.g. CENT-2026-8912)..."
+                aria-label="Complaint tracking code"
                 value={searchCode}
                 onChange={(e) => setSearchCode(e.target.value)}
                 className="w-full bg-blue-950/80 border border-blue-700/80 text-white placeholder-blue-300/70 text-xs rounded-lg pl-8 pr-16 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all"
@@ -171,7 +172,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile: compact auth badge / login */}
-        <div className="flex md:hidden items-center gap-2 shrink-0">
+        <div className="flex lg:hidden items-center gap-2 shrink-0">
           {currentUser ? (
             <div className="flex items-center gap-1.5">
               <div className="w-8 h-8 rounded-lg bg-amber-400 text-blue-950 font-black flex items-center justify-center text-xs shadow shrink-0">

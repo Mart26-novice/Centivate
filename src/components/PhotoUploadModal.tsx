@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Upload, Check, Image as ImageIcon, Sparkles } from 'lucide-react';
 import campusBg from '../assets/images/cpu_campus_aerial.jpg';
+import { useEscapeKey } from '../lib/useEscapeKey';
 
 interface PhotoUploadModalProps {
   isOpen: boolean;
@@ -63,6 +64,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   onSelectPhoto,
   currentPhotoUrl = '',
 }) => {
+  useEscapeKey(isOpen, onClose);
   const [selectedUrl, setSelectedUrl] = useState<string>(currentPhotoUrl);
   const [customFilePreview, setCustomFilePreview] = useState<string>('');
 
@@ -146,7 +148,8 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-blue-200 hover:text-white p-1 rounded-lg hover:bg-blue-800 transition-colors"
+            aria-label="Close dialog"
+            className="text-blue-200 hover:text-white p-2 rounded-lg hover:bg-blue-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

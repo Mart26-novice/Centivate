@@ -33,7 +33,6 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  Menu,
 } from 'lucide-react';
 import { Complaint, ComplaintStatus, ComplaintCategory, BuildingLocation, SystemStats, MaintenanceStaff, OfficialStudent } from '../types';
 
@@ -95,12 +94,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Sidebar navigation state (collapsed preference remembered per browser)
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('centivate_admin_sidebar_collapsed') === '1';
+      const saved = localStorage.getItem('centivate_admin_sidebar_collapsed');
+      if (saved !== null) return saved === '1';
     } catch {
-      return false;
+      // storage unavailable: fall through to the responsive default
     }
+    // Two sidebars (app + dashboard) leave too little width below 2xl, so start on the icon rail.
+    return typeof window !== 'undefined' && window.innerWidth < 1536;
   });
-  const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false);
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
@@ -410,22 +411,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'students', label: 'Student Directory', icon: GraduationCap, count: studentList.length },
   ];
 
-  const renderSidebarNav = (variant: 'desktop' | 'mobile') =>
+  const renderSidebarNav = () =>
     sidebarNavItems.map((item) => {
       const Icon = item.icon;
       const isActive = activeTab === item.id;
-      const collapsed = variant === 'desktop' && sidebarCollapsed;
+      const collapsed = sidebarCollapsed;
       return (
         <button
           key={item.id}
-          onClick={() => {
-            setActiveTab(item.id);
-            if (variant === 'mobile') setMobileNavOpen(false);
-          }}
+          onClick={() => setActiveTab(item.id)}
           title={collapsed ? item.label : undefined}
-          className={`w-full flex items-center gap-3 rounded-xl font-bold transition-all ${
+          aria-label={collapsed ? item.label : undefined}
+          aria-current={isActive ? 'page' : undefined}
+          className={`w-full flex items-center gap-3 rounded-xl font-bold transition-all text-xs ${
             collapsed ? 'justify-center px-2 py-2.5' : 'px-3 py-2.5 text-left'
-          } ${variant === 'mobile' ? 'text-sm py-3' : 'text-xs'} ${
+          } ${
             isActive ? 'bg-blue-950 text-amber-300 shadow' : 'text-slate-600 hover:bg-slate-100 hover:text-blue-900'
           }`}
         >
@@ -466,44 +466,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
           </div>
-          <nav className="flex flex-col gap-1 p-2">{renderSidebarNav('desktop')}</nav>
+          <nav className="flex flex-col gap-1 p-2">{renderSidebarNav()}</nav>
         </aside>
-
-        {/* DASHBOARD SIDEBAR (mobile drawer) */}
-        {mobileNavOpen && (
-          <div className="md:hidden fixed inset-0 z-50 flex">
-            <div
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
-              onClick={() => setMobileNavOpen(false)}
-            />
-            <div className="relative w-64 max-w-[80vw] h-full bg-white shadow-2xl p-3 animate-fadeIn overflow-y-auto">
-              <div className="flex items-center justify-between px-2 py-2 mb-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Dashboard</span>
-                <button
-                  onClick={() => setMobileNavOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100"
-                  aria-label="Close menu"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex flex-col gap-1">{renderSidebarNav('mobile')}</div>
-            </div>
-          </div>
-        )}
 
         {/* MAIN CONTENT */}
         <div className="flex-1 min-w-0 space-y-8">
           {/* Page Title & Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <button
-                onClick={() => setMobileNavOpen(true)}
-                className="md:hidden p-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors shrink-0"
-                aria-label="Open dashboard menu"
-              >
-                <Menu className="w-4 h-4" />
-              </button>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="bg-amber-400 text-blue-950 font-black text-xs px-2.5 py-0.5 rounded-md uppercase">
@@ -527,6 +497,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <span>Export CSV Dataset</span>
             </button>
           </div>
+
+          {/* Section switcher for small screens (the side rail takes over from md up) */}
+          <nav aria-label="Dashboard sections" className="md:hidden grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
+            {sidebarNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-xl py-2.5 min-h-[48px] text-[11px] font-bold transition-colors ${
+                    isActive ? 'bg-blue-950 text-amber-300 shadow' : 'text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{item.id === 'students' ? 'Students' : item.label}{item.count !== undefined ? ` (${item.count})` : ''}</span>
+                </button>
+              );
+            })}
+          </nav>
 
           {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -667,6 +658,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <input
                 type="text"
                 placeholder="Search by Code, Title, Room, Student, Staff..."
+                aria-label="Search complaints"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-9 pr-3 py-2 text-xs font-semibold focus:ring-2 focus:ring-amber-400 focus:outline-none"
@@ -677,6 +669,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Dropdown Filters */}
             <div className="flex flex-wrap items-center gap-2">
               <select
+                aria-label="Filter by status"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
@@ -690,6 +683,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </select>
 
               <select
+                aria-label="Filter by category"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
@@ -702,9 +696,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <option value="Plumbing & Water">Plumbing & Water</option>
                 <option value="IT & Audio-Visual">IT & Audio-Visual</option>
                 <option value="Doors, Windows & Structure">Doors & Windows</option>
+                <option value="Grounds & Safety">Grounds & Safety</option>
+                <option value="Other Facilities">Other Facilities</option>
               </select>
 
               <select
+                aria-label="Filter by building"
                 value={selectedBuilding}
                 onChange={(e) => setSelectedBuilding(e.target.value)}
                 className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
@@ -715,6 +712,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <option value="Senior High Building C">Senior High Building C</option>
                 <option value="Gymnasium & Sports Complex">Gymnasium</option>
                 <option value="Library & Learning Commons">Library</option>
+                <option value="Cafeteria & Student Center">Cafeteria & Student Center</option>
+                <option value="Campus Grounds">Campus Grounds</option>
               </select>
 
               <button
@@ -760,14 +759,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       key={item.id}
                       className="hover:bg-blue-50/50 transition-colors group cursor-pointer"
                     >
-                      <td className="p-3.5 font-mono font-bold text-blue-950" onClick={() => onSelectComplaint(item)}>
+                      <td className="p-3.5 font-mono font-bold text-blue-950 whitespace-nowrap" onClick={() => onSelectComplaint(item)}>
                         <span className="bg-blue-100 text-blue-900 px-2 py-1 rounded border border-blue-200">
                           {item.trackingCode}
                         </span>
                       </td>
 
                       <td className="p-3.5" onClick={() => onSelectComplaint(item)}>
-                        <p className="font-bold text-slate-900 group-hover:text-blue-900 line-clamp-1">
+                        <p className="font-bold text-slate-900 group-hover:text-blue-900 line-clamp-2 min-w-[10rem]">
                           {item.title}
                         </p>
                         <span className="text-[10px] text-slate-500 font-semibold block">
@@ -782,7 +781,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       <td className="p-3.5" onClick={() => onSelectComplaint(item)}>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap ${
                             item.priority === 'Urgent / Hazard'
                               ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse'
                               : item.priority === 'High'
@@ -798,7 +797,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       <td className="p-3.5" onClick={() => onSelectComplaint(item)}>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap tracking-wider ${
                             item.status === 'Resolved'
                               ? 'bg-emerald-100 text-emerald-800'
                               : item.status === 'In Progress'
@@ -924,14 +923,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => openEditStaffModal(st)}
-                          className="p-1.5 text-slate-500 hover:text-blue-950 hover:bg-blue-100 rounded-lg transition-colors"
+                          aria-label="Edit staff member"
+                          className="p-2 text-slate-700 hover:text-blue-950 hover:bg-slate-200 rounded-lg transition-colors"
                           title="Edit Staff Details & Reassign Role"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setDeleteConfirmStaff(st)}
-                          className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors"
+                          aria-label="Remove staff member"
+                          className="p-2 text-slate-700 hover:text-red-700 hover:bg-slate-200 rounded-lg transition-colors"
                           title="Remove Staff Member"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1149,7 +1150,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               <button
                 onClick={() => setIsStaffModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-blue-900 rounded-xl transition-colors"
+                aria-label="Close dialog"
+                className="p-2 text-blue-200 hover:text-white hover:bg-blue-900 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1363,7 +1365,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
               <button
                 onClick={() => setIsStudentModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-blue-900 rounded-xl transition-colors"
+                aria-label="Close dialog"
+                className="p-2 text-blue-200 hover:text-white hover:bg-blue-900 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

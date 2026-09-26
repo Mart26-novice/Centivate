@@ -96,13 +96,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Call to Actions */}
-          <div className="pt-4 flex flex-wrap items-center justify-center gap-4 w-full max-w-md">
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-4 w-full max-w-xl">
             <button
               onClick={() => onNavigate('student')}
-              className="w-full sm:w-auto flex-1 px-8 py-4 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 flex items-center justify-center gap-2 transform active:scale-95 transition-all"
+              className="w-full sm:w-auto px-8 py-4 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-sm uppercase tracking-wider rounded-2xl shadow-xl border-b-4 border-amber-600 flex items-center justify-center gap-2 transform active:scale-95 transition-all"
             >
               <ShieldAlert className="w-5 h-5 text-blue-950" />
-              <span>Report Facility Issue</span>
+              <span className="whitespace-nowrap">Report Facility Issue</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -111,7 +111,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="w-full sm:w-auto px-6 py-4 bg-blue-900/90 hover:bg-blue-800 text-white font-bold text-sm rounded-2xl shadow-lg border border-amber-400/40 backdrop-blur-sm flex items-center justify-center gap-2 transform active:scale-95 transition-all"
             >
               <ShieldCheck className="w-5 h-5 text-amber-400" />
-              <span>Admin / Staff Dispatch</span>
+              <span className="whitespace-nowrap">Admin / Staff Dispatch</span>
             </button>
           </div>
 
@@ -133,7 +133,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="text-center max-w-3xl mx-auto mb-10 space-y-2">
           <div className="inline-flex items-center gap-1.5 text-blue-900 font-black text-xs uppercase tracking-widest bg-amber-100 px-3 py-1 rounded-full border border-amber-300">
             <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>System Architecture</span>
+            <span>How It Works</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tight">
             Designed for CPU Senior High School Excellence

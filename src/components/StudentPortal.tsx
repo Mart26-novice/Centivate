@@ -18,6 +18,15 @@ import {
   Send,
   UserCheck,
   FileText,
+  Toilet,
+  Armchair,
+  Fan,
+  Lightbulb,
+  Droplets,
+  Monitor,
+  DoorOpen,
+  TreePine,
+  type LucideIcon,
 } from 'lucide-react';
 import { Complaint, ComplaintCategory, BuildingLocation, ComplaintPriority, UserSession } from '../types';
 import { PhotoUploadModal } from './PhotoUploadModal';
@@ -32,15 +41,15 @@ interface StudentPortalProps {
   onOpenLogin?: () => void;
 }
 
-const CATEGORY_OPTIONS: { name: ComplaintCategory; icon: string; desc: string }[] = [
-  { name: 'Restroom & Sanitation', icon: '🚽', desc: 'Sinks, toilets, tissue holders, soap dispensers' },
-  { name: 'Classroom Furniture', icon: '🪑', desc: 'Armchairs, whiteboards, teachers desks, bookshelves' },
-  { name: 'HVAC & Ventilation', icon: '🌀', desc: 'Electric fans, air conditioners, exhaust vents' },
-  { name: 'Lighting & Electrical', icon: '💡', desc: 'Fluorescent lights, power outlets, switches, breakers' },
-  { name: 'Plumbing & Water', icon: '🚰', desc: 'Water fountains, leaking pipes, drainage, faucets' },
-  { name: 'IT & Audio-Visual', icon: '💻', desc: 'Projectors, monitors, audio speakers, internet jacks' },
-  { name: 'Doors, Windows & Structure', icon: '🚪', desc: 'Door knobs, window panes, jalousies, ceiling tiles' },
-  { name: 'Grounds & Safety', icon: '🏫', desc: 'Walkways, stairs handrails, trash bins, sports courts' },
+const CATEGORY_OPTIONS: { name: ComplaintCategory; Icon: LucideIcon; desc: string }[] = [
+  { name: 'Restroom & Sanitation', Icon: Toilet, desc: 'Sinks, toilets, tissue holders, soap dispensers' },
+  { name: 'Classroom Furniture', Icon: Armchair, desc: 'Armchairs, whiteboards, teachers desks, bookshelves' },
+  { name: 'HVAC & Ventilation', Icon: Fan, desc: 'Electric fans, air conditioners, exhaust vents' },
+  { name: 'Lighting & Electrical', Icon: Lightbulb, desc: 'Fluorescent lights, power outlets, switches, breakers' },
+  { name: 'Plumbing & Water', Icon: Droplets, desc: 'Water fountains, leaking pipes, drainage, faucets' },
+  { name: 'IT & Audio-Visual', Icon: Monitor, desc: 'Projectors, monitors, audio speakers, internet jacks' },
+  { name: 'Doors, Windows & Structure', Icon: DoorOpen, desc: 'Door knobs, window panes, jalousies, ceiling tiles' },
+  { name: 'Grounds & Safety', Icon: TreePine, desc: 'Walkways, stairs handrails, trash bins, sports courts' },
 ];
 
 const BUILDING_OPTIONS: BuildingLocation[] = [
@@ -326,25 +335,28 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </div>
 
             {/* Category Grid Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div role="radiogroup" aria-label="Facility category" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {CATEGORY_OPTIONS.map((cat) => {
                 const isSelected = category === cat.name;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={cat.name}
+                    role="radio"
+                    aria-checked={isSelected}
                     onClick={() => setCategory(cat.name)}
-                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 ${
                       isSelected
                         ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-400/30 scale-[1.02] shadow-sm'
                         : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/30'
                     }`}
                   >
                     <div>
-                      <div className="text-2xl mb-1">{cat.icon}</div>
+                      <cat.Icon aria-hidden="true" className={`w-6 h-6 mb-1.5 ${isSelected ? 'text-amber-600' : 'text-blue-900'}`} />
                       <h4 className="font-extrabold text-xs text-blue-950 leading-snug">{cat.name}</h4>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{cat.desc}</p>
-                  </div>
+                    <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{cat.desc}</p>
+                  </button>
                 );
               })}
             </div>
@@ -364,10 +376,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Issue Title */}
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="sp-field-1">
                   Issue Summary Title <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input id="sp-field-1"
                   type="text"
                   required
                   placeholder="e.g. Broken wall electric fan in Room 304 / Water leak in 2nd floor restroom"
@@ -379,10 +391,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
               {/* Building Location */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="sp-field-2">
                   Campus Building <span className="text-red-500">*</span>
                 </label>
-                <select
+                <select id="sp-field-2"
                   value={locationBuilding}
                   onChange={(e: any) => setLocationBuilding(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
@@ -397,10 +409,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
               {/* Room / Specific Area */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="sp-field-3">
                   Room Number / Specific Area <span className="text-red-500">*</span>
                 </label>
-                <input
+                <input id="sp-field-3"
                   type="text"
                   required
                   placeholder="e.g. Room 304 - STEM 12-A / AVR 1 / 2nd Floor Male Restroom"
@@ -413,7 +425,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               {/* Detailed Description */}
               <div className="md:col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 uppercase">
+                  <label className="block text-xs font-bold text-slate-700 uppercase" htmlFor="sp-field-4">
                     Detailed Description <span className="text-red-500">*</span>
                   </label>
                   <button
@@ -426,7 +438,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     <span>{aiAnalyzing ? 'Analyzing...' : 'Gemini AI Auto-Diagnose & Priority Check'}</span>
                   </button>
                 </div>
-                <textarea
+                <textarea id="sp-field-4"
                   rows={3}
                   required
                   placeholder="Describe the problem in detail (e.g., condition of the object, any safety hazards, exact location inside the room, noise level)..."
@@ -576,10 +588,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fadeIn">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="sp-field-5">
                     Student Full Name
                   </label>
-                  <input
+                  <input id="sp-field-5"
                     type="text"
                     placeholder="e.g. Marc Vincent Reyes"
                     value={studentName}
@@ -589,10 +601,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="sp-field-6">
                     Grade & Strand / Section
                   </label>
-                  <select
+                  <select id="sp-field-6"
                     value={studentStrand}
                     onChange={(e) => setStudentStrand(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-bold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
@@ -606,10 +618,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="sp-field-7">
                     School Email (Optional)
                   </label>
-                  <input
+                  <input id="sp-field-7"
                     type="email"
                     placeholder="student@shs.edu.ph"
                     value={contactEmail}
@@ -623,7 +635,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </div>
 
           {/* Submit Button Bar */}
-          <div className="pt-4 border-t border-slate-200 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <p className="text-[11px] text-slate-500 font-medium">
               By submitting, your report will be sent directly to the SHS Maintenance Admin Desk.
             </p>
@@ -631,7 +643,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <button
               type="submit"
               disabled={submitting}
-              className="px-8 py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
+              className="w-full sm:w-auto whitespace-nowrap justify-center px-8 py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transform hover:-translate-y-0.5 transition-all flex items-center gap-2"
             >
               <Send className="w-4 h-4 stroke-[3]" />
               <span>{submitting ? 'Submitting Report...' : 'Submit Facility Report'}</span>

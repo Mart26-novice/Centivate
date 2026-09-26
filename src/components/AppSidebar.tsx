@@ -94,7 +94,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     <>
       {/* DESKTOP/TABLET PERSISTENT SIDEBAR */}
       <aside
-        className={`hidden md:flex md:flex-col shrink-0 sticky top-0 h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-indigo-900 border-r-4 border-amber-400 transition-all duration-300 ${
+        className={`hidden lg:flex lg:flex-col shrink-0 sticky top-0 h-screen bg-gradient-to-b from-blue-950 via-blue-900 to-indigo-900 border-r-4 border-amber-400 transition-all duration-300 ${
           collapsed ? 'w-[64px]' : 'w-60'
         }`}
       >
@@ -128,7 +128,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
       {/* MOBILE DRAWER */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
+        <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
             onClick={onCloseMobile}

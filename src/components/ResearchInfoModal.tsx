@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../lib/useEscapeKey';
 import {
   X,
   BookOpen,
@@ -28,6 +29,7 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
   surveyCount = 0,
   onSurveySubmitted,
 }) => {
+  useEscapeKey(isOpen, onClose);
   const [activeSubTab, setActiveSubTab] = useState<'paper' | 'survey'>('paper');
 
   // Survey state
@@ -96,7 +98,8 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-blue-200 hover:text-white p-1 rounded-lg hover:bg-blue-800 transition-colors"
+            aria-label="Close dialog"
+            className="text-blue-200 hover:text-white p-2 rounded-lg hover:bg-blue-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
