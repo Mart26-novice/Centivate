@@ -41,20 +41,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="relative min-h-[500px] lg:min-h-[580px] bg-blue-950 text-white overflow-hidden">
         {/* Background Image overlay */}
         <div className="absolute inset-0 z-0">
+          {/* Soft backdrop: the same photo scaled to fill and blurred, so the section is always fully covered. */}
+          <img
+            src={campusBg}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover object-[50%_65%] scale-110 blur-2xl opacity-70"
+          />
+          {/* Sharp photo at its natural ratio: never stretched, never cropped, centred and anchored to the
+              bottom, with its sides and top feathered into the backdrop. */}
           <img
             src={campusBg}
             alt="Central Philippine University Aerial Campus View"
-            className="w-full h-full object-cover opacity-80 scale-100 hover:scale-105 transition-transform duration-1000"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              e.currentTarget.src = campusBg;
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto h-auto max-w-full max-h-full opacity-90"
+            style={{
+              WebkitMaskImage:
+                'linear-gradient(to right, transparent, #000 10%, #000 90%, transparent), linear-gradient(to bottom, transparent, #000 20%)',
+              WebkitMaskComposite: 'source-in',
+              maskImage:
+                'linear-gradient(to right, transparent, #000 10%, #000 90%, transparent), linear-gradient(to bottom, transparent, #000 20%)',
+              maskComposite: 'intersect',
             }}
+            referrerPolicy="no-referrer"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/65 to-blue-900/35" />
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-950/85 via-blue-950/55 to-blue-950/30" />
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 max-w-5xl mx-auto px-6 py-12 sm:py-20 text-center flex flex-col items-center justify-center min-h-[500px] lg:min-h-[580px] space-y-6">
+        <div className="relative z-10 max-w-5xl mx-auto px-6 pt-12 pb-48 sm:py-20 text-center flex flex-col items-center justify-center min-h-[500px] lg:min-h-[580px] space-y-6">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400 text-blue-950 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg transform hover:scale-105 transition-transform">
             <GraduationCap className="w-4 h-4 text-blue-950" />
