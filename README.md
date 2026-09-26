@@ -25,7 +25,8 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
    - Filter, search, assign, resolve, or archive facility complaints.
    - Role-gated maintenance staff workload management, including a per-staff notification email.
    - Live AI Analysis trigger for automated priority elevation upon safety hazard detection.
-   - Collapsible left sidebar (desktop: icon-only or labeled, remembers your preference; mobile: slide-in drawer) for switching between Work Orders, Technicians, and the Student Directory without leaving the page.
+   - Section switcher for Work Orders, Technicians, and the Student Directory: a collapsible side rail on tablet/desktop (starts as a slim icon rail below 1536px wide, remembers your choice) and a visible tab bar with counts on phones.
+   - Readable work-order table (tracking codes never wrap, titles wrap to two lines) and filters covering every facility category and building.
 
 5. **Staff Assignment Email Notifications (Resend)**
    - When an admin assigns a complaint to a maintenance staff member, the server emails that staff member automatically via [Resend](https://resend.com) — best-effort, and silently skipped if `RESEND_API_KEY` isn't configured.
@@ -39,7 +40,12 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
    - Embedded survey collection for research data gathering and campus satisfaction metrics.
 
 8. **App-wide Collapsible Sidebar Navigation**
-   - The whole app (Home, Student Portal, Admin Dashboard, Analytics & Research) is navigated through a single left sidebar — desktop-persistent and collapsible, mobile slide-in drawer — instead of a header nav bar, keeping the header itself limited to branding, tracking search, and login/logout.
+   - The whole app (Home, Student Portal, Admin Dashboard, Analytics & Research) is navigated through a single left sidebar — persistent and collapsible from 1024px up, a slide-in drawer below that (phones and tablets) — instead of a header nav bar, keeping the header itself limited to branding, tracking search, and login/logout.
+
+9. **Accessibility & Responsive Polish**
+   - Every form field has an associated label; icon-only buttons have accessible names; facility categories are keyboard-operable radio buttons with visible focus; all dialogs close with `Esc` (`src/lib/useEscapeKey.ts`).
+   - Landing hero image fills the section without stretching: a plain cover fit on tablet/desktop (section is at least half as tall as it is wide, so cropping comes off the sky, not the sign and lawn) and a full-photo layout on phones.
+   - Tested at 1440, 1024, 820 and 390 px wide (Playwright CLI + browser pane) with no horizontal overflow.
 
 ---
 
@@ -47,13 +53,13 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend** | React 19, TypeScript, Tailwind CSS, Lucide React, Framer Motion |
+| **Frontend** | React 19, TypeScript, Tailwind CSS v4, Lucide React |
 | **Backend API** | Node.js, Express, TypeScript |
 | **AI Integration** | `@google/genai` SDK with `gemini-3.6-flash` |
 | **Database & Auth** | Firebase Firestore, Firebase Auth, `firebase-admin` SDK |
 | **Email** | [Resend](https://resend.com) — staff assignment notifications |
 | **Security** | Firestore Security Rules (`firestore.rules`), Firebase ID Token + role verification middleware |
-| **Testing** | Vitest (`vitest run`), TypeScript Type Checking (`tsc --noEmit`) |
+| **Testing** | Vitest (`npm test`): 49 tests covering the Express API (privacy scoping, validation, audit logging, rate limiting, staff email), helpers and email escaping; TypeScript type checking (`npm run lint` = `tsc --noEmit`) |
 | **Deployment** | Vercel (serverless Node functions) |
 
 ---
@@ -266,8 +272,10 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 │   └── cpu_campus_aerial.jpg        # Campus aerial photo
 ├── src/                             # Client React Application source
 │   ├── __tests__/                   # Automated unit & integration tests
-│   │   ├── authAndApi.test.ts
+│   │   ├── authAndApi.test.ts       # API behaviour: privacy scoping, validation, audit log, staff email, admin gating
+│   │   ├── apiRateLimit.test.ts     # Rate limiting
 │   │   ├── complaintHelpers.test.ts
+│   │   ├── emailTemplate.test.ts    # HTML escaping in assignment emails
 │   │   └── initialData.test.ts
 │   ├── components/                  # UI React components & modals
 │   │   ├── AdminDashboard.tsx       # Admin dashboard, with its own collapsible internal sidebar
@@ -282,9 +290,9 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 │   │   ├── PrintableReportModal.tsx # Printable PDF/print report layout
 │   │   ├── PublicTracker.tsx        # Single-complaint tracking lookup view
 │   │   ├── ResearchInfoModal.tsx    # Academic research background & SUS survey modal
-│   │   └── StudentPortal.tsx        # Complaint filing form & history portal
+│   │   └── StudentPortal.tsx        # Complaint filing form (accessible category radios) & history portal
 │   ├── data/                        # Static seed & preset data
-│   │   ├── authData.ts              # Preset display data (demo-fill helpers only, not real credentials)
+│   │   ├── authData.ts              # Legacy demo preset data; no longer imported by the app (safe to delete)
 │   │   └── initialData.ts           # Demo campus complaints, staff & survey seeds
 │   ├── db/                          # Unused Postgres/Drizzle schema (not wired into the app; kept for reference)
 │   │   ├── drizzle.config.ts
@@ -294,7 +302,8 @@ On-demand Gemini 3.6 Flash diagnosis of a facility complaint.
 │   │   ├── firebase-admin.ts        # Server-side Firebase Admin SDK — lazy init, explicit credentials
 │   │   ├── firebase.ts              # Client-side Firebase App SDK initialization
 │   │   ├── firebaseProjectConfig.ts # Public Firebase web config (plain TS module, not a JSON import)
-│   │   └── firestoreService.ts      # Real-time Firestore subscriptions & CRUD helpers
+│   │   ├── firestoreService.ts      # API client (apiFetch), session restore, complaint/staff polling, admin realtime + student directory
+│   │   └── useEscapeKey.ts          # Esc-to-close hook used by all dialogs
 │   ├── utils/                       # Helper & utility functions
 │   │   └── complaintHelpers.ts      # Tracking code generator, search & stats computers
 │   ├── App.tsx                      # Root application component, global state, app-shell layout
