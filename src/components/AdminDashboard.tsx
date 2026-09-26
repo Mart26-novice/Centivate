@@ -433,7 +433,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
           {!collapsed && item.count !== undefined && (
             <span
-              className={`text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
+              className={`text-[11px] font-black px-1.5 py-0.5 rounded-full shrink-0 ${
                 isActive ? 'bg-amber-400 text-blue-950' : 'bg-slate-200 text-slate-600'
               }`}
             >
@@ -455,7 +455,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <div className={`flex items-center border-b border-slate-100 px-3 py-3 ${sidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             {!sidebarCollapsed && (
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Dashboard</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">Dashboard</span>
             )}
             <button
               onClick={toggleSidebar}
@@ -535,7 +535,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               : 'bg-white border-slate-200 hover:border-blue-300'
           }`}
         >
-          <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
+          <span className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider">
             Total Reports
           </span>
           <div className="flex items-baseline justify-between mt-1">
@@ -558,7 +558,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               : 'bg-white border-amber-200 hover:border-amber-300'
           }`}
         >
-          <span className="text-[10px] font-extrabold uppercase text-amber-600 tracking-wider">
+          <span className="text-[11px] font-extrabold uppercase text-amber-600 tracking-wider">
             Pending Review
           </span>
           <div className="flex items-baseline justify-between mt-1">
@@ -581,7 +581,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               : 'bg-white border-indigo-200 hover:border-indigo-300'
           }`}
         >
-          <span className="text-[10px] font-extrabold uppercase text-indigo-600 tracking-wider">
+          <span className="text-[11px] font-extrabold uppercase text-indigo-600 tracking-wider">
             In Progress
           </span>
           <div className="flex items-baseline justify-between mt-1">
@@ -604,7 +604,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               : 'bg-white border-emerald-200 hover:border-emerald-300'
           }`}
         >
-          <span className="text-[10px] font-extrabold uppercase text-emerald-600 tracking-wider">
+          <span className="text-[11px] font-extrabold uppercase text-emerald-600 tracking-wider">
             Resolved
           </span>
           <div className="flex items-baseline justify-between mt-1">
@@ -627,7 +627,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               : 'bg-white border-red-200 hover:border-red-300'
           }`}
         >
-          <span className="text-[10px] font-extrabold uppercase text-red-600 tracking-wider">
+          <span className="text-[11px] font-extrabold uppercase text-red-600 tracking-wider">
             Urgent Hazards
           </span>
           <div className="flex items-baseline justify-between mt-1">
@@ -638,7 +638,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* Avg Time */}
         <div className="bg-white p-4 rounded-2xl border border-blue-200 shadow-sm space-y-1">
-          <span className="text-[10px] font-extrabold uppercase text-blue-800 tracking-wider">
+          <span className="text-[11px] font-extrabold uppercase text-blue-800 tracking-wider">
             Avg Resolution
           </span>
           <div className="flex items-baseline justify-between mt-1">
@@ -769,19 +769,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <p className="font-bold text-slate-900 group-hover:text-blue-900 line-clamp-2 min-w-[10rem]">
                           {item.title}
                         </p>
-                        <span className="text-[10px] text-slate-500 font-semibold block">
+                        <span className="text-[11px] text-slate-500 font-semibold block">
                           {item.category}
                         </span>
                       </td>
 
                       <td className="p-3.5" onClick={() => onSelectComplaint(item)}>
                         <p className="font-semibold text-slate-800">{item.locationBuilding}</p>
-                        <span className="text-[10px] text-slate-500">{item.locationRoom}</span>
+                        <span className="text-[11px] text-slate-500">{item.locationRoom}</span>
                       </td>
 
                       <td className="p-3.5" onClick={() => onSelectComplaint(item)}>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap ${
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase whitespace-nowrap ${
                             item.priority === 'Urgent / Hazard'
                               ? 'bg-red-100 text-red-800 border border-red-300 animate-pulse'
                               : item.priority === 'High'
@@ -797,7 +797,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                       <td className="p-3.5" onClick={() => onSelectComplaint(item)}>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap tracking-wider ${
+                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase whitespace-nowrap tracking-wider ${
                             item.status === 'Resolved'
                               ? 'bg-emerald-100 text-emerald-800'
                               : item.status === 'In Progress'
@@ -819,14 +819,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                       </td>
 
-                      <td className="p-3.5 text-slate-500 font-mono text-[11px]" onClick={() => onSelectComplaint(item)}>
+                      <td className="p-3.5 text-slate-600 font-mono text-[11px]" onClick={() => onSelectComplaint(item)}>
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
 
                       <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
                         <button
                           onClick={() => onSelectComplaint(item)}
-                          className="px-2.5 py-1 bg-blue-900 hover:bg-blue-800 text-white font-bold text-[11px] rounded transition-colors"
+                          className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-lg transition-colors"
                         >
                           Manage
                         </button>
@@ -846,7 +846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="border-b border-slate-200 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-blue-900 text-amber-300 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase">
+                <span className="bg-blue-900 text-amber-300 font-extrabold text-[11px] px-2 py-0.5 rounded uppercase">
                   CPPO Personnel Desk
                 </span>
                 <span className="text-xs text-slate-500 font-semibold">
@@ -1010,7 +1010,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-blue-100 text-blue-900 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase">
+                <span className="bg-blue-100 text-blue-900 font-black text-[11px] px-2.5 py-0.5 rounded-full uppercase">
                   Official Database
                 </span>
                 <span className="text-xs font-semibold text-slate-500">
@@ -1058,7 +1058,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           ) : (
             <div className="overflow-x-auto border border-slate-200 rounded-2xl">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase font-black tracking-wider text-[10px] border-b border-slate-200">
+                <thead className="bg-slate-50 text-slate-500 uppercase font-black tracking-wider text-[11px] border-b border-slate-200">
                   <tr>
                     <th className="p-3.5">Student ID Number</th>
                     <th className="p-3.5">Full Name</th>
@@ -1083,7 +1083,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <td className="p-3.5 text-slate-600">{st.yearLevel || 'Grade 12'}</td>
                       <td className="p-3.5">
                         <span
-                          className={`px-2 py-0.5 rounded font-black text-[10px] uppercase ${
+                          className={`px-2 py-0.5 rounded font-black text-[11px] uppercase ${
                             st.status === 'Active'
                               ? 'bg-emerald-100 text-emerald-800'
                               : st.status === 'Graduated'
@@ -1256,20 +1256,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   onChange={(e) => setStaffEmail(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 font-semibold text-blue-950 focus:ring-2 focus:ring-amber-400 focus:outline-none"
                 />
-                <p className="text-[10px] text-slate-500 font-medium">
+                <p className="text-[11px] text-slate-500 font-medium">
                   Sent an email automatically whenever a complaint is assigned to this staff member. Leave blank to disable.
                 </p>
               </div>
 
               {/* Live Preview Card */}
               <div className="bg-blue-50/70 p-3.5 rounded-2xl border border-blue-200 space-y-1">
-                <span className="text-[10px] font-black uppercase text-blue-800 tracking-wider">Role Summary Preview</span>
+                <span className="text-[11px] font-black uppercase text-blue-800 tracking-wider">Role Summary Preview</span>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-extrabold text-blue-950">{name || 'Staff Name'}</p>
                     <p className="text-amber-700 font-bold text-xs">{role === 'Custom' ? customRole || 'Custom Role' : role}</p>
                   </div>
-                  <span className="px-2 py-0.5 bg-blue-900 text-amber-300 rounded font-bold text-[10px]">
+                  <span className="px-2 py-0.5 bg-blue-900 text-amber-300 rounded font-bold text-[11px]">
                     {specialty}
                   </span>
                 </div>

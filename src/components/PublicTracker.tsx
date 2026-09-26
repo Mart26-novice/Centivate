@@ -281,7 +281,7 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                             <StepIcon className="w-4 h-4" />
                           </div>
                           <span
-                            className={`text-[10px] font-bold mt-1 text-center max-w-[70px] ${
+                            className={`text-[11px] font-bold mt-1 text-center max-w-[70px] ${
                               isResolved && idx === 3
                                 ? 'text-emerald-700 font-black'
                                 : isCurrent
@@ -373,11 +373,11 @@ export const PublicTracker: React.FC<PublicTrackerProps> = ({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-blue-900">{log.status}</span>
-                          <span className="text-[10px] text-slate-400">• {log.updatedBy}</span>
+                          <span className="text-[11px] text-slate-400">• {log.updatedBy}</span>
                         </div>
                         <p className="text-slate-600 text-[11px] mt-0.5">{log.note}</p>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap">
+                      <span className="text-[11px] font-mono text-slate-400 whitespace-nowrap">
                         {new Date(log.timestamp).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',

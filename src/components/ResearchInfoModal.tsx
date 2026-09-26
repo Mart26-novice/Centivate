@@ -144,7 +144,7 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
             <div className="space-y-6">
               {/* Paper Title Block */}
               <div className="bg-blue-50/80 border-l-4 border-amber-400 rounded-r-xl p-4 space-y-1">
-                <span className="text-[10px] uppercase tracking-wider font-extrabold text-blue-900">
+                <span className="text-[11px] uppercase tracking-wider font-extrabold text-blue-900">
                   Senior High School Practical Research Project
                 </span>
                 <h4 className="text-base font-black text-blue-950">
@@ -189,19 +189,19 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                   <div className="bg-white p-2 rounded-lg border border-slate-200">
                     <span className="font-extrabold text-blue-900 block">Frontend</span>
-                    <span className="text-[10px] text-slate-500">React 18 + Tailwind CSS</span>
+                    <span className="text-[11px] text-slate-500">React 18 + Tailwind CSS</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-slate-200">
                     <span className="font-extrabold text-blue-900 block">Backend</span>
-                    <span className="text-[10px] text-slate-500">Node.js + Express REST API</span>
+                    <span className="text-[11px] text-slate-500">Node.js + Express REST API</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-slate-200">
                     <span className="font-extrabold text-blue-900 block">AI Logic</span>
-                    <span className="text-[10px] text-slate-500">Gemini 3.6 Flash</span>
+                    <span className="text-[11px] text-slate-500">Gemini 3.6 Flash</span>
                   </div>
                   <div className="bg-white p-2 rounded-lg border border-slate-200">
                     <span className="font-extrabold text-blue-900 block">Analytics</span>
-                    <span className="text-[10px] text-slate-500">System Usability Scale (SUS)</span>
+                    <span className="text-[11px] text-slate-500">System Usability Scale (SUS)</span>
                   </div>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
                       <div key={idx} className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
                         <label className="block font-bold text-slate-800 text-xs">{item.label}</label>
                         <div className="flex items-center justify-between gap-1 max-w-md">
-                          <span className="text-[10px] text-slate-500">1 (Disagree)</span>
+                          <span className="text-[11px] text-slate-500">1 (Disagree)</span>
                           {[1, 2, 3, 4, 5].map((val) => (
                             <button
                               type="button"
@@ -292,7 +292,7 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
                               {val}
                             </button>
                           ))}
-                          <span className="text-[10px] text-slate-500">5 (Agree)</span>
+                          <span className="text-[11px] text-slate-500">5 (Agree)</span>
                         </div>
                       </div>
                     ))}

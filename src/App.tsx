@@ -573,12 +573,12 @@ export default function App() {
           <p className="font-semibold">
             Centivate © 2026 • Senior High School Complaint Reporting & Management System
           </p>
-          <div className="flex items-center gap-3 text-[11px] text-amber-300 font-bold">
-            <button onClick={() => setIsResearchModalOpen(true)} className="hover:underline">
+          <div className="flex items-center gap-1 text-xs text-amber-300 font-bold">
+            <button onClick={() => setIsResearchModalOpen(true)} className="hover:underline min-h-[44px] px-2 inline-flex items-center">
               System Evaluation Survey
             </button>
             <span>•</span>
-            <button onClick={() => handleOpenTracker()} className="hover:underline">
+            <button onClick={() => handleOpenTracker()} className="hover:underline min-h-[44px] px-2 inline-flex items-center">
               Public Tracker Lookup
             </button>
           </div>

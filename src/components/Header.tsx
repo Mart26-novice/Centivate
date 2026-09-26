@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="bg-amber-400 text-blue-950 px-4 py-1.5 text-xs font-semibold flex items-center justify-between shadow-inner">
         <div className="flex items-center gap-2 max-w-7xl mx-auto w-full justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="bg-blue-950 text-amber-300 text-[10px] uppercase font-extrabold px-2 py-0.5 rounded tracking-wider shrink-0">
+            <span className="bg-blue-950 text-amber-300 text-[11px] uppercase font-extrabold px-2 py-0.5 rounded tracking-wider shrink-0">
               SHS Capstone
             </span>
             <span className="hidden md:inline truncate">
@@ -55,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={onOpenResearchInfo}
-              className="flex items-center gap-1.5 text-blue-950 hover:text-blue-800 font-bold underline transition-colors"
+              className="flex items-center gap-1.5 py-3.5 -my-3.5 px-1 text-blue-950 hover:text-blue-800 font-bold underline transition-colors"
             >
               <span className="hidden sm:inline">Research Docs & Evaluation Survey</span>
               <span className="sm:hidden">Research</span>
@@ -95,12 +95,12 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg md:text-2xl font-black tracking-tight text-white font-sans flex items-center gap-2">
+              <div className="text-lg md:text-2xl font-black tracking-tight text-white font-sans flex items-center gap-2">
                 CENTIVATE
                 <span className="hidden sm:inline text-amber-400 text-sm font-semibold tracking-normal px-2 py-0.5 rounded bg-blue-900/80 border border-amber-400/30">
-                  v2.6
+                  v3.0
                 </span>
-              </h1>
+              </div>
             </div>
           </div>
         </div>
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <p className="font-bold text-white text-[11px] leading-tight truncate max-w-[120px]">
                       {currentUser.fullName}
                     </p>
-                    <p className="text-[10px] text-amber-300 capitalize font-medium">
+                    <p className="text-[11px] text-amber-300 capitalize font-medium">
                       {currentUser.role} Account
                     </p>
                   </div>

@@ -225,7 +225,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <span className="text-2xl font-black text-emerald-600 mt-1 block">
               {Math.round(((effectiveStats?.resolvedCount || 1) / total) * 100)}%
             </span>
-            <span className="text-[10px] text-slate-400 mt-1 block">Resolved vs Total Reports</span>
+            <span className="text-[11px] text-slate-400 mt-1 block">Resolved vs Total Reports</span>
           </div>
 
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -233,7 +233,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <span className="text-2xl font-black text-blue-900 mt-1 block">
               {effectiveStats?.avgResolutionTimeHours ? `${effectiveStats.avgResolutionTimeHours} Hours` : 'No data yet'}
             </span>
-            <span className="text-[10px] text-slate-400 mt-1 block">Time from Filing to Completion</span>
+            <span className="text-[11px] text-slate-400 mt-1 block">Time from Filing to Completion</span>
           </div>
 
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -241,7 +241,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <span className="text-2xl font-black text-red-600 mt-1 block">
               {effectiveStats?.urgentHazardCount || 0}
             </span>
-            <span className="text-[10px] text-slate-400 mt-1 block">High priority risks resolved</span>
+            <span className="text-[11px] text-slate-400 mt-1 block">High priority risks resolved</span>
           </div>
 
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -249,7 +249,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <span className="text-2xl font-black text-amber-600 mt-1 block">
               {effectiveStats?.surveyCount || 0} Evaluators
             </span>
-            <span className="text-[10px] text-slate-400 mt-1 block">SUS Research Participants</span>
+            <span className="text-[11px] text-slate-400 mt-1 block">SUS Research Participants</span>
           </div>
         </div>
       </div>

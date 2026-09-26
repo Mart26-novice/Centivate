@@ -219,8 +219,8 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                       }}
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-blue-950/90 via-blue-950/60 to-transparent p-1.5 text-white">
-                      <p className="text-[10px] font-bold truncate">{item.title}</p>
-                      <span className="text-[9px] text-amber-300">{item.category}</span>
+                      <p className="text-[11px] font-bold truncate">{item.title}</p>
+                      <span className="text-[11px] text-amber-300">{item.category}</span>
                     </div>
                     {isSelected && (
                       <div className="absolute top-1 right-1 bg-amber-400 text-blue-950 rounded-full p-0.5">

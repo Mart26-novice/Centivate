@@ -277,7 +277,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
             {/* Generated Code Box */}
             <div className="bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl p-4 space-y-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block">
                 Your Reference Tracking Code
               </span>
               <div className="flex items-center justify-center gap-2">
@@ -458,7 +458,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     <span>Gemini AI Smart Assistant Recommendation</span>
                   </div>
                   {aiResult.safetyHazardDetected && (
-                    <span className="bg-red-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full uppercase flex items-center gap-1 animate-pulse">
+                    <span className="bg-red-500 text-white font-black text-[11px] px-2 py-0.5 rounded-full uppercase flex items-center gap-1 animate-pulse">
                       <AlertTriangle className="w-3 h-3" /> Safety Risk Detected
                     </span>
                   )}
@@ -511,7 +511,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               ) : (
                 <div className="w-28 h-28 bg-white border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center text-slate-400">
                   <Camera className="w-8 h-8 mb-1" />
-                  <span className="text-[10px] font-bold">No Photo</span>
+                  <span className="text-[11px] font-bold">No Photo</span>
                 </div>
               )}
 
@@ -565,7 +565,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                         Logged in as: <span className="text-blue-900">{currentUser.fullName}</span> ({currentUser.email})
                       </span>
                     </div>
-                    <span className="bg-amber-400 text-blue-950 text-[10px] font-black px-2 py-0.5 rounded uppercase">
+                    <span className="bg-amber-400 text-blue-950 text-[11px] font-black px-2 py-0.5 rounded uppercase">
                       {currentUser.role} Credentials
                     </span>
                   </div>
@@ -659,7 +659,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg font-black text-blue-950">Student Complaints Register</h3>
-                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                   Personal Account
                 </span>
               </div>

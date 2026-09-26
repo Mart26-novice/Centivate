@@ -303,7 +303,7 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
                   <span>Gemini AI Safety & Technical Diagnosis</span>
                 </div>
                 {complaint.aiAnalysis.safetyHazardDetected && (
-                  <span className="bg-red-500 text-white font-extrabold text-[10px] uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="bg-red-500 text-white font-extrabold text-[11px] uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
                     Safety Hazard Flagged
                   </span>
@@ -481,7 +481,7 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
                     </div>
                     <p className="text-slate-700 mt-1 font-medium">{log.note}</p>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap ml-2">
+                  <span className="text-[11px] font-mono text-slate-400 whitespace-nowrap ml-2">
                     {new Date(log.timestamp).toLocaleString()}
                   </span>
                 </div>
