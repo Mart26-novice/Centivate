@@ -36,39 +36,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   resolvedCount,
 }) => {
   return (
-    <div className="space-y-12 pb-16 animate-fadeIn">
+    <div className="@container space-y-12 pb-16 animate-fadeIn">
       {/* Hero Banner with CPU Aerial Campus Image */}
-      <section className="relative min-h-[500px] lg:min-h-[580px] bg-blue-950 text-white overflow-hidden">
+      <section className="relative flex flex-col min-h-[500px] sm:min-h-[max(500px,50cqw)] bg-blue-950 text-white overflow-hidden">
         {/* Background Image overlay */}
         <div className="absolute inset-0 z-0">
-          {/* Soft backdrop: the same photo scaled to fill and blurred, so the section is always fully covered. */}
-          <img
-            src={campusBg}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover object-[50%_65%] scale-110 blur-2xl opacity-70"
-          />
-          {/* Sharp photo at its natural ratio: never stretched, never cropped, centred and anchored to the
-              bottom, with its sides and top feathered into the backdrop. */}
+          {/* Small screens: the whole photo at its natural ratio under the content (nothing cropped), feathered
+              into a blurred copy of itself that fills the rest of the section. */}
+          <div className="sm:hidden">
+            <img
+              src={campusBg}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover object-[50%_65%] scale-110 blur-2xl opacity-70"
+            />
+            <img
+              src={campusBg}
+              alt="Central Philippine University Aerial Campus View"
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto h-auto max-w-full max-h-full opacity-90"
+              style={{
+                WebkitMaskImage:
+                  'linear-gradient(to right, transparent, #000 10%, #000 90%, transparent), linear-gradient(to bottom, transparent, #000 20%)',
+                WebkitMaskComposite: 'source-in',
+                maskImage:
+                  'linear-gradient(to right, transparent, #000 10%, #000 90%, transparent), linear-gradient(to bottom, transparent, #000 20%)',
+                maskComposite: 'intersect',
+              }}
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          {/* Larger screens: the section is at least half as tall as it is wide (see min-height above), which is
+              close to the photo's own 16:9 shape, so a plain cover fit barely crops. Whatever must be trimmed
+              comes off the sky at the top, not the sign and lawn at the bottom. */}
           <img
             src={campusBg}
             alt="Central Philippine University Aerial Campus View"
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-auto h-auto max-w-full max-h-full opacity-90"
-            style={{
-              WebkitMaskImage:
-                'linear-gradient(to right, transparent, #000 10%, #000 90%, transparent), linear-gradient(to bottom, transparent, #000 20%)',
-              WebkitMaskComposite: 'source-in',
-              maskImage:
-                'linear-gradient(to right, transparent, #000 10%, #000 90%, transparent), linear-gradient(to bottom, transparent, #000 20%)',
-              maskComposite: 'intersect',
-            }}
+            className="hidden sm:block absolute inset-0 w-full h-full object-cover object-[28%_78%] opacity-90"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-blue-950/85 via-blue-950/55 to-blue-950/30" />
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 max-w-5xl mx-auto px-6 pt-12 pb-48 sm:py-20 text-center flex flex-col items-center justify-center min-h-[500px] lg:min-h-[580px] space-y-6">
+        <div className="relative z-10 w-full flex-1 max-w-5xl mx-auto px-6 pt-12 pb-48 sm:py-20 text-center flex flex-col items-center justify-center space-y-6">
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-amber-400 text-blue-950 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-lg transform hover:scale-105 transition-transform">
             <GraduationCap className="w-4 h-4 text-blue-950" />
