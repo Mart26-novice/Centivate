@@ -88,8 +88,12 @@ CentIvate is a full-stack, AI-assisted web application designed for Senior High 
 ```
 
 ### Security Measures Implemented
-- **Firestore Security Rules**: Single-document read (`get`) is permitted for public tracking lookups; bulk list operations (`list`) and sensitive collections (`staff`, `students`, `surveys`) require authenticated credentials (`isEmailAuth()`). Updating or deleting a complaint, and all writes to `staff`/`students`, require `isAdmin()` — a signed-in non-admin user can no longer edit someone else's ticket. The `users` collection (where role assignment lives) is entirely client-write-blocked (`allow write: if false`).
-- **Server API Authorization**: Mutating API endpoints (`PATCH`, `DELETE` for complaints; `POST`, `PATCH`, `DELETE` for staff) verify a Firebase ID Token *and* that the token belongs to an admin (`role: "admin"` in `users/{uid}`, or an allowlisted email) — a valid token from a non-admin account is rejected with `403`, not silently treated as authorized.
+- **Firestore Security Rules**: The client SDK is read-only and admin-only for `complaints`, `staff`, `surveys` and `students`; a user may read only their own `users/{uid}` profile. Complaints, surveys and staff are written exclusively by the Express API (Admin SDK) after validation. Public tracking and students' own reports go through the API, never direct Firestore reads. The `users` collection (where role assignment lives) is entirely client-write-blocked (`allow write: if false`).
+- **Verified-email admin allowlist**: the built-in admin email allowlist (in `api/app.ts` and `firestore.rules`) is honoured only when the Firebase account's email is **verified**, because Firebase lets anyone register any address. The reliable way to be admin is the `role: "admin"` field in `users/{uid}`, which only the signup endpoint can write.
+- **Server API Authorization**: Mutating API endpoints (`PATCH`, `DELETE` for complaints; `POST`, `PATCH`, `DELETE` for staff) verify a Firebase ID Token *and* that the token belongs to an admin (`role: "admin"` in `users/{uid}`, or a verified allowlisted email) — a valid token from a non-admin account is rejected with `403`. Audit-log entries are attributed to the verified admin's email, never to a client-supplied name.
+- **Privacy scoping**: `GET /api/complaints` returns full records only to admins and to the account that filed a report (anonymous reports are never linked to an account and store no contact details); everyone else receives an aggregate-only view (status, category, building, priority, dates). `GET /api/staff` hides phone/email from non-admins and `GET /api/surveys` is admin-only.
+- **Abuse protection**: per-IP rate limits on complaint filing, tracking lookups, surveys, AI analysis and failed access-code attempts (in-memory per server instance — a first line of defence, not a substitute for a WAF), constant-time access-code comparison, hardening headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`), and HTML-escaping of complaint text in assignment emails.
+- **Honest failures**: when Firebase credentials are configured, a failed Firestore write returns an error to the user instead of a fake success; demo seed data is used only for local development or when `SEED_DEMO_DATA=true`, and statistics show "No data yet" rather than invented numbers.
 - **Role assignment is server-only**: the only way a `users/{uid}` document gets written is `POST /api/auth/profile`, which requires a verified ID token *and* the correct access code for the requested role (a separate, stronger code for `admin`). This prevents a signed-in user from ever self-assigning admin privileges via the client SDK.
 - **Local-dev-only auth bypass**: `x-admin-authorization` is honored only when `NODE_ENV !== 'production'` and matches `ADMIN_DEV_BYPASS_TOKEN` — never set that variable in a production environment.
 - **Input & File Payload Validation**: Server-side string length caps (e.g., Description 10–5000 chars) and base64 image MIME type check (`data:image/jpeg`, `data:image/png`, `data:image/webp`, `<500KB`).
@@ -163,7 +167,7 @@ Completes signup for a Firebase Auth account created client-side, by writing its
 
 #### `GET /api/complaints`
 Retrieve list of complaints with optional filtering.
-- **Access**: Public / Authenticated Staff
+- **Access**: Scoped by caller — admins get full records; a signed-in user gets their own (non-anonymous) reports in full plus an aggregate-only view of the rest; anonymous visitors get the aggregate-only view (no titles, descriptions, tracking codes, names, emails or photos).
 - **Query Parameters**:
   - `status` (`Filed`, `In Progress`, `Resolved`, `Cancelled`, `All`)
   - `category` (`Lighting & Electrical`, `Plumbing & Water`, etc.)
@@ -221,7 +225,7 @@ Archive a complaint.
 ### 2. Maintenance Staff API
 
 #### `GET /api/staff`
-Get all maintenance personnel and current workload metrics.
+Get all maintenance personnel and current workload metrics. Admins receive phone and email; everyone else receives only name, role, specialty and workload.
 
 #### `POST /api/staff`
 Add a new maintenance staff member.

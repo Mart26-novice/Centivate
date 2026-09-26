@@ -266,7 +266,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ? (totalHoursSum / resolvedItems.length).toFixed(1)
       : stats?.avgResolutionTimeHours
       ? stats.avgResolutionTimeHours.toFixed(1)
-      : '24.0';
+      : '—';
 
   // Filter Logic for Complaints
   const filtered = complaints.filter((c) => {

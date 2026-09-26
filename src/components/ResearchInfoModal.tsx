@@ -24,8 +24,8 @@ interface ResearchInfoModalProps {
 export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
   isOpen,
   onClose,
-  avgSatisfactionScore = 4.7,
-  surveyCount = 3,
+  avgSatisfactionScore = 0,
+  surveyCount = 0,
   onSurveySubmitted,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'paper' | 'survey'>('paper');
@@ -40,12 +40,14 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
   const [comments, setComments] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [surveyError, setSurveyError] = useState('');
 
   if (!isOpen) return null;
 
   const handleSurveySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setSurveyError('');
     try {
       const res = await fetch('/api/surveys', {
         method: 'POST',
@@ -64,9 +66,13 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
       if (res.ok) {
         setSubmitted(true);
         if (onSurveySubmitted) onSurveySubmitted();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSurveyError(errData.error || 'Could not submit your responses. Please try again.');
       }
     } catch (err) {
       console.error('Survey submission error:', err);
+      setSurveyError('Could not reach the server. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -125,7 +131,7 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
 
           <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-blue-950 bg-white px-3 py-1 rounded-full border border-blue-200">
             <Award className="w-3.5 h-3.5 text-amber-500" />
-            <span>Usability Rating: {avgSatisfactionScore} / 5.0</span>
+            <span>Usability Rating: {surveyCount > 0 ? `${avgSatisfactionScore} / 5.0` : 'No responses yet'}</span>
           </div>
         </div>
 
@@ -302,6 +308,12 @@ export const ResearchInfoModal: React.FC<ResearchInfoModalProps> = ({
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
                     />
                   </div>
+
+                  {surveyError && (
+                    <div role="alert" className="bg-rose-50 border border-rose-200 text-rose-700 px-3.5 py-2 rounded-xl text-xs font-semibold">
+                      {surveyError}
+                    </div>
+                  )}
 
                   <button
                     type="submit"

@@ -18,6 +18,7 @@ import { auth, db } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signOut,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import campusBg from '../assets/images/cpu_campus_aerial.jpg';
@@ -96,6 +97,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       const profileSnap = await getDoc(doc(db, 'users', cred.user.uid));
 
       if (!profileSnap.exists()) {
+        await signOut(auth);
         setError('Your account has no profile on record yet. Please contact the Centivate administrator.');
         return;
       }
@@ -208,7 +210,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden flex flex-col md:flex-row relative">
+      <div role="dialog" aria-modal="true" aria-label="Centivate sign in" className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden flex flex-col md:flex-row relative">
         {/* Left Visual Column featuring CPU Campus Image */}
         <div className="md:w-5/12 bg-blue-950 text-white relative min-h-[260px] md:min-h-[520px] flex flex-col justify-between p-6 overflow-hidden">
           {/* Background Image overlay */}
@@ -278,6 +280,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 onClick={onClose}
                 className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 flex items-center justify-center font-bold text-sm transition-colors"
                 title="Close Modal"
+                aria-label="Close dialog"
               >
                 ✕
               </button>
@@ -313,7 +316,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
 
             {error && (
-              <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-700 px-3.5 py-2 rounded-xl text-xs font-semibold">
+              <div role="alert" className="mb-4 bg-rose-50 border border-rose-200 text-rose-700 px-3.5 py-2 rounded-xl text-xs font-semibold">
                 {error}
               </div>
             )}
@@ -321,10 +324,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             {mode === 'login' ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-1">Email</label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
+                    <input id="lm-field-1"
                       type="email"
                       required
                       value={email}
@@ -336,10 +339,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-2">Password</label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
+                    <input id="lm-field-2"
                       type="password"
                       required
                       value={password}
@@ -426,8 +429,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-                  <input
+                  <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-3">Full Name</label>
+                  <input id="lm-field-3"
                     type="text"
                     required
                     value={fullName}
@@ -439,10 +442,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 {signupRole !== 'admin' && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-4">
                       {signupRole === 'teacher' ? 'Department' : 'Strand / Section'}
                     </label>
-                    <input
+                    <input id="lm-field-4"
                       type="text"
                       value={strandOrDepartment}
                       onChange={(e) => setStrandOrDepartment(e.target.value)}
@@ -453,10 +456,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Email</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-5">Email</label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
+                    <input id="lm-field-5"
                       type="email"
                       required
                       value={email}
@@ -469,10 +472,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-6">Password</label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
+                      <input id="lm-field-6"
                         type="password"
                         required
                         value={password}
@@ -483,10 +486,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-7">Confirm Password</label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
+                      <input id="lm-field-7"
                         type="password"
                         required
                         value={confirmPassword}
@@ -499,12 +502,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1" htmlFor="lm-field-8">
                     {signupRole === 'admin' ? 'Admin Setup Code' : 'Participant Access Code'}
                   </label>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
+                    <input id="lm-field-8"
                       type="text"
                       required
                       value={accessCode}

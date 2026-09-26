@@ -44,7 +44,7 @@ export function computeStatsFromComplaints(
   });
 
   const avgResolutionTimeHours =
-    resolvedItems.length > 0 ? parseFloat((totalHours / resolvedItems.length).toFixed(1)) : 24.0;
+    resolvedItems.length > 0 ? parseFloat((totalHours / resolvedItems.length).toFixed(1)) : 0;
 
   return {
     totalComplaints,
@@ -57,8 +57,8 @@ export function computeStatsFromComplaints(
     avgResolutionTimeHours,
     categoryBreakdown,
     buildingBreakdown,
-    surveyCount: existingStats?.surveyCount ?? 3,
-    avgSatisfactionScore: existingStats?.avgSatisfactionScore ?? 4.7,
+    surveyCount: existingStats?.surveyCount ?? 0,
+    avgSatisfactionScore: existingStats?.avgSatisfactionScore ?? 0,
   };
 }
 

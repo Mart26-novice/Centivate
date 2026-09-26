@@ -28,28 +28,32 @@ const LoadingFallback = () => (
   </div>
 );
 import { Complaint, ComplaintStatus, SystemStats, MaintenanceStaff, UserSession, UserRole, OfficialStudent } from './types';
-import { INITIAL_COMPLAINTS, INITIAL_STAFF, INITIAL_STUDENTS } from './data/initialData';
 import { computeStatsFromComplaints } from './utils/complaintHelpers';
 import {
+  apiFetch,
+  fetchComplaints,
+  fetchStaff as fetchStaffFromApi,
   subscribeToComplaints,
   subscribeToStudents,
   subscribeToStaff,
-  subscribeToSurveys,
-  addComplaintToDb,
-  updateComplaintInDb,
   saveStudentToDb,
   deleteStudentFromDb,
-  saveStaffToDb,
-  deleteStaffFromDb,
-  getAuthHeaders,
+  watchSession,
+  signOutUser,
 } from './lib/firestoreService';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'student' | 'admin' | 'analytics' | 'research'>('home');
-  const [complaints, setComplaints] = useState<Complaint[]>(INITIAL_COMPLAINTS);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
-  const [staffList, setStaffList] = useState<MaintenanceStaff[]>(INITIAL_STAFF);
-  const [studentList, setStudentList] = useState<OfficialStudent[]>(INITIAL_STUDENTS);
+  const [staffList, setStaffList] = useState<MaintenanceStaff[]>([]);
+  const [studentList, setStudentList] = useState<OfficialStudent[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const showError = (err: unknown, fallback: string) => {
+    setNotice(err instanceof Error && err.message ? err.message : fallback);
+    setTimeout(() => setNotice(null), 7000);
+  };
 
   // Session Intro & Real Data Fetch Tracking
   const [showIntro, setShowIntro] = useState<boolean>(() => {
@@ -124,65 +128,17 @@ export default function App() {
     }
   };
 
-  // Real-time Firestore sync on mount
+  // Restore the signed-in session (role/name from users/{uid}) after a page refresh.
   useEffect(() => {
-    // 1. Subscribe to complaints in Firestore
-    const unsubscribeComplaints = subscribeToComplaints((liveComplaints) => {
-      setComplaints(liveComplaints);
-      setStats((prevStats) => computeStatsFromComplaints(liveComplaints, prevStats));
-      markCollectionLoaded('complaints');
-    });
-
-    // 2. Subscribe to official students in Firestore
-    const unsubscribeStudents = subscribeToStudents((liveStudents) => {
-      setStudentList(liveStudents);
-      markCollectionLoaded('students');
-    });
-
-    // 3. Subscribe to staff in Firestore (auto-seeds staff collection if empty)
-    const unsubscribeStaff = subscribeToStaff((liveStaff) => {
-      setStaffList(liveStaff);
-      markCollectionLoaded('staff');
-    });
-
-    // 4. Subscribe to surveys in Firestore (auto-seeds surveys collection if empty)
-    const unsubscribeSurveys = subscribeToSurveys(() => {
-      fetchStats();
-      markCollectionLoaded('surveys');
-    });
-
-    fetchStats();
-
-    // Safety fallback timer if Firestore connection is slow or operating in offline mode
-    const fallbackTimer = setTimeout(() => {
-      markCollectionLoaded('complaints');
-      markCollectionLoaded('students');
-      markCollectionLoaded('staff');
-      markCollectionLoaded('surveys');
-      markCollectionLoaded('stats');
-    }, 2500);
-
-    return () => {
-      clearTimeout(fallbackTimer);
-      unsubscribeComplaints();
-      unsubscribeStudents();
-      unsubscribeStaff();
-      unsubscribeSurveys();
-    };
+    return watchSession((user) => setCurrentUser(user));
   }, []);
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/stats');
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
-      } else {
-        setStats((prev) => computeStatsFromComplaints(complaints, prev));
-      }
+      setStats(await apiFetch<SystemStats>('/api/stats'));
     } catch (err) {
-      console.warn('Stats fetch failed, using live client computed stats:', err);
-      setStats((prev) => computeStatsFromComplaints(complaints, prev));
+      console.warn('Stats fetch failed, using client-computed stats:', err);
+      setStats((prev) => computeStatsFromComplaints(complaintsRef.current, prev));
     } finally {
       markCollectionLoaded('stats');
     }
@@ -190,71 +146,69 @@ export default function App() {
 
   const fetchStaff = async () => {
     try {
-      const res = await fetch('/api/staff');
-      if (res.ok) {
-        const data = await res.json();
-        setStaffList(data);
-      }
+      setStaffList(await fetchStaffFromApi());
     } catch (err) {
       console.warn('Staff fetch failed:', err);
     }
   };
 
-  const handleCreateComplaint = async (newReportData: any): Promise<Complaint> => {
-    let created: Complaint;
+  const refreshComplaints = async () => {
     try {
-      const res = await fetch('/api/complaints', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newReportData),
-      });
-
-      if (res.ok) {
-        created = await res.json();
-      } else {
-        throw new Error('Server returned error');
-      }
+      setComplaints(await fetchComplaints());
     } catch (err) {
-      // Fallback local creation if offline
-      const now = new Date().toISOString();
-      const code = `CENT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      created = {
-        id: `CMP-${Date.now()}`,
-        trackingCode: code,
-        title: newReportData.title,
-        description: newReportData.description,
-        category: newReportData.category,
-        locationBuilding: newReportData.locationBuilding,
-        locationRoom: newReportData.locationRoom,
-        priority: newReportData.priority || 'Medium',
-        status: 'Filed',
-        photoUrl: newReportData.photoUrl || '',
-        studentName: newReportData.isAnonymous ? 'Anonymous' : newReportData.studentName,
-        studentStrand: newReportData.isAnonymous ? '' : newReportData.studentStrand,
-        isAnonymous: !!newReportData.isAnonymous,
-        contactEmail: newReportData.contactEmail || '',
-        logs: [
-          {
-            id: `LOG-${Date.now()}`,
-            status: 'Filed',
-            note: 'Complaint filed via Student Portal.',
-            updatedBy: newReportData.studentName || 'Student',
-            timestamp: now,
-          },
-        ],
-        createdAt: now,
-        updatedAt: now,
-        isArchived: false,
-      };
+      console.warn('Complaint refresh failed:', err);
     }
+  };
 
-    // Always persist to live Firestore database
-    try {
-      await addComplaintToDb(created);
-    } catch (e) {
-      console.warn('Firestore add complaint error:', e);
-    }
+  const complaintsRef = React.useRef<Complaint[]>([]);
+  useEffect(() => {
+    complaintsRef.current = complaints;
+  }, [complaints]);
 
+  // Staff + stats are public-safe and load once for everyone.
+  useEffect(() => {
+    const unsubscribeStaff = subscribeToStaff((liveStaff) => {
+      setStaffList(liveStaff);
+      markCollectionLoaded('staff');
+    });
+
+    fetchStats();
+    const statsTimer = setInterval(fetchStats, 60000);
+
+    // Safety fallback so the intro overlay never hangs on a slow connection
+    const fallbackTimer = setTimeout(() => {
+      ['complaints', 'students', 'staff', 'stats'].forEach(markCollectionLoaded);
+    }, 2500);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      clearInterval(statsTimer);
+      unsubscribeStaff();
+    };
+  }, []);
+
+  // Complaints/students depend on who is signed in (what the API returns and what the
+  // security rules allow differ by role), so they re-subscribe whenever the user changes.
+  useEffect(() => {
+    const unsubscribeComplaints = subscribeToComplaints((liveComplaints) => {
+      setComplaints(liveComplaints);
+      setStats((prevStats) => computeStatsFromComplaints(liveComplaints, prevStats));
+      markCollectionLoaded('complaints');
+    });
+
+    const unsubscribeStudents = subscribeToStudents((liveStudents) => {
+      setStudentList(liveStudents);
+      markCollectionLoaded('students');
+    });
+
+    return () => {
+      unsubscribeComplaints();
+      unsubscribeStudents();
+    };
+  }, [currentUser?.id]);
+
+  const handleCreateComplaint = async (newReportData: any): Promise<Complaint> => {
+    const created = await apiFetch<Complaint>('/api/complaints', { method: 'POST', body: newReportData });
     setComplaints((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
     fetchStats();
     return created;
@@ -262,35 +216,23 @@ export default function App() {
 
   const handleUpdateComplaint = async (id: string, updates: any) => {
     try {
-      await fetch(`/api/complaints/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-        body: JSON.stringify(updates),
-      });
+      const updated = await apiFetch<Complaint>(`/api/complaints/${id}`, { method: 'PATCH', body: updates });
+      setComplaints((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      setSelectedComplaint((prev) => (prev && prev.id === id ? updated : prev));
+      fetchStats();
+      fetchStaff();
     } catch (err) {
-      console.warn('API update failed, applying to Firestore directly:', err);
+      showError(err, 'Could not update the complaint.');
+      throw err;
     }
-
-    // Persist update in Firestore
-    try {
-      await updateComplaintInDb(id, updates);
-    } catch (e) {
-      console.warn('Firestore update complaint error:', e);
-    }
-
-    fetchStats();
   };
 
   const handleSaveStudent = async (student: OfficialStudent) => {
     try {
       await saveStudentToDb(student);
     } catch (err) {
-      console.error('Failed to save student to Firestore:', err);
-      setStudentList((prev) => {
-        const exists = prev.some((s) => s.id === student.id);
-        if (exists) return prev.map((s) => (s.id === student.id ? student : s));
-        return [...prev, student];
-      });
+      showError(err, 'Could not save the student record.');
+      throw err;
     }
   };
 
@@ -298,91 +240,62 @@ export default function App() {
     try {
       await deleteStudentFromDb(id);
     } catch (err) {
-      console.error('Failed to delete student from Firestore:', err);
-      setStudentList((prev) => prev.filter((s) => s.id !== id));
+      showError(err, 'Could not delete the student record.');
     }
   };
 
   const handleUpdateComplaintStatus = async (id: string, newStatus: ComplaintStatus, note?: string) => {
-    await handleUpdateComplaint(id, {
-      status: newStatus,
-      note: note || `Status updated to ${newStatus}`,
-      updatedBy: 'Admin Maintenance Team',
-    });
+    try {
+      await handleUpdateComplaint(id, {
+        status: newStatus,
+        note: note || `Status updated to ${newStatus}`,
+      });
+    } catch {
+      // handleUpdateComplaint already told the admin what went wrong
+    }
   };
 
   const handleArchiveComplaint = async (id: string) => {
     try {
-      await fetch(`/api/complaints/${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
+      await apiFetch(`/api/complaints/${id}`, { method: 'DELETE' });
       setComplaints((prev) => prev.map((c) => (c.id === id ? { ...c, isArchived: true } : c)));
       if (selectedComplaint?.id === id) {
         setSelectedComplaint(null);
       }
       fetchStats();
     } catch (err) {
-      console.error('Archive error:', err);
+      showError(err, 'Could not archive the complaint.');
     }
   };
 
   const handleCreateStaff = async (staffData: Omit<MaintenanceStaff, 'id' | 'activeWorkload'>) => {
-    let created: MaintenanceStaff;
     try {
-      const res = await fetch('/api/staff', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-        body: JSON.stringify(staffData),
-      });
-      if (res.ok) {
-        created = await res.json();
-      } else {
-        throw new Error('Server creation failed');
-      }
+      await apiFetch('/api/staff', { method: 'POST', body: staffData });
+      await fetchStaff();
     } catch (err) {
-      console.warn('Backend API create staff failed, using Firestore fallback:', err);
-      created = {
-        id: `ST-${Date.now().toString().slice(-4)}`,
-        ...staffData,
-        activeWorkload: 0,
-      };
-    }
-    try {
-      await saveStaffToDb(created);
-    } catch (e) {
-      console.warn('Firestore save staff error:', e);
+      showError(err, 'Could not add the staff member.');
+      throw err;
     }
   };
 
   const handleUpdateStaff = async (id: string, updates: Partial<MaintenanceStaff>) => {
     try {
-      await fetch(`/api/staff/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) },
-        body: JSON.stringify(updates),
-      });
+      await apiFetch(`/api/staff/${id}`, { method: 'PATCH', body: updates });
+      await fetchStaff();
+      refreshComplaints();
     } catch (err) {
-      console.warn('Backend API update staff failed:', err);
-    }
-    const existing = staffList.find((s) => s.id === id);
-    if (existing) {
-      const updatedMember = { ...existing, ...updates };
-      try {
-        await saveStaffToDb(updatedMember);
-      } catch (e) {
-        console.warn('Firestore update staff error:', e);
-      }
+      showError(err, 'Could not update the staff member.');
+      throw err;
     }
   };
 
   const handleDeleteStaff = async (id: string) => {
     try {
-      await fetch(`/api/staff/${id}`, { method: 'DELETE', headers: await getAuthHeaders() });
+      await apiFetch(`/api/staff/${id}`, { method: 'DELETE' });
+      await fetchStaff();
+      refreshComplaints();
     } catch (err) {
-      console.warn('Backend API delete staff failed:', err);
-    }
-    try {
-      await deleteStaffFromDb(id);
-    } catch (e) {
-      console.warn('Firestore delete staff error:', e);
+      showError(err, 'Could not remove the staff member.');
     }
   };
 
@@ -398,6 +311,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    signOutUser().catch((err) => console.warn('Sign-out failed:', err));
     setCurrentUser(null);
     setActiveTab('home');
     updateRouteHash('home');
@@ -462,6 +376,18 @@ export default function App() {
         onCloseMobile={() => setMobileNavOpen(false)}
         onOpenTracker={handleOpenTracker}
       />
+
+      {notice && (
+        <div
+          role="alert"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] max-w-md w-[calc(100%-2rem)] bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-start justify-between gap-3"
+        >
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} aria-label="Dismiss message" className="text-rose-500 hover:text-rose-800 font-black">
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Global Header */}
@@ -681,8 +607,8 @@ export default function App() {
       <ResearchInfoModal
         isOpen={isResearchModalOpen}
         onClose={() => setIsResearchModalOpen(false)}
-        avgSatisfactionScore={stats?.avgSatisfactionScore || 4.7}
-        surveyCount={stats?.surveyCount || 3}
+        avgSatisfactionScore={stats?.avgSatisfactionScore ?? 0}
+        surveyCount={stats?.surveyCount ?? 0}
         onSurveySubmitted={fetchStats}
       />
 

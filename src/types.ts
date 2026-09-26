@@ -73,6 +73,7 @@ export interface Complaint {
   updatedAt: string;
   isArchived: boolean;
   aiAnalysis?: AIAnalysisResult;
+  ownerUid?: string;
 }
 
 export interface SurveyResponse {

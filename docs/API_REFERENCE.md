@@ -69,12 +69,17 @@ Retrieve complaints list with optional filtering.
 
 **Query Parameters:**
 - `status`: Filter by status (`Filed`, `Pending`, `In Progress`, `Resolved`, `Cancelled`, `All`)
-- `category`: Filter by facility category (`Lighting & Electrical`, `Plumbing & Water`, `Furniture & Fixtures`, `HVAC & Aircon`, `Cleanliness & Sanitation`, `IT & AV Equipment`, `Structural & Safety`, `Other Facilities`)
-- `building`: Filter by building (`Main Building`, `Annex Building`, `Science Complex`, `Gymnasium & Sports Center`, `Library & Admin Building`)
+- `category`: one of `Restroom & Sanitation`, `Classroom Furniture`, `HVAC & Ventilation`, `Lighting & Electrical`, `Plumbing & Water`, `IT & Audio-Visual`, `Doors, Windows & Structure`, `Grounds & Safety`, `Other Facilities`
+- `building`: one of `Main Building A`, `Science & Tech Wing B`, `Senior High Building C`, `Gymnasium & Sports Complex`, `Library & Learning Commons`, `Cafeteria & Student Center`, `Campus Grounds`
 - `search`: Case-insensitive text search in title, description, tracking code, or room
 - `includeArchived`: `true` to include archived records
 
-**Response (200 OK):** Array of `Complaint` objects.
+**Response (200 OK):** Array of `Complaint` objects, scoped by who is asking:
+- **Admin** — full records.
+- **Signed-in user** — their own (non-anonymous) reports in full, plus an aggregate-only view of everyone else's.
+- **Anonymous visitor** — aggregate-only view: `status`, `category`, `locationBuilding`, `priority`, dates and `isArchived`; `title`, `description`, `trackingCode`, names, emails and photos are blanked/omitted.
+
+`POST /api/complaints`, `/api/complaints/track/:code`, `/api/surveys` and `/api/ai/analyze-complaint` are rate limited per client IP (`429` when exceeded). Unknown categories, buildings, priorities or statuses are rejected with `400`; photos must be base64 `data:image/*` payloads under 500 KB (external image URLs are rejected).
 
 ---
 
@@ -190,7 +195,7 @@ Archive a complaint record.
 ### 3. Maintenance Staff Management
 
 #### `GET /api/staff`
-Retrieve all maintenance staff members with calculated `activeWorkload`.
+Retrieve all maintenance staff members with calculated `activeWorkload`. Admins receive `phone` and `email`; other callers receive only `id`, `name`, `role`, `specialty` and `activeWorkload` (`phone` is blank).
 
 #### `POST /api/staff`
 Add a maintenance staff member.
@@ -256,10 +261,10 @@ Triggers Gemini 3.6 Flash analysis for a complaint.
 ### 5. System Usability Survey API
 
 #### `GET /api/surveys`
-Get all submitted System Usability Scale (SUS) survey responses.
+Get all submitted System Usability Scale (SUS) survey responses. **Admin only** (responses include free-text feedback).
 
 #### `POST /api/surveys`
-Submit a new SUS survey evaluation.
+Submit a new SUS survey evaluation. `role` must be `Student`, `Faculty/Admin` or `Maintenance Staff`, and every `susQ1`–`susQ5` must be an integer from 1 to 5 — incomplete submissions are rejected with `400` rather than defaulted. Returns `201` with `{ id, submittedAt }`.
 
 **Request Body:**
 ```json

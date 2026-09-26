@@ -20,7 +20,6 @@ import {
   FileText,
 } from 'lucide-react';
 import { Complaint, ComplaintCategory, BuildingLocation, ComplaintPriority, UserSession } from '../types';
-import { PRESET_STUDENTS } from '../data/authData';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import campusBg from '../assets/images/cpu_campus_aerial.jpg';
 
@@ -80,10 +79,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   const [locationRoom, setLocationRoom] = useState('');
   const [priority, setPriority] = useState<ComplaintPriority>('Medium');
   const [photoUrl, setPhotoUrl] = useState('');
-  const [studentName, setStudentName] = useState(currentUser?.fullName || 'Juan De La Cruz');
+  const [studentName, setStudentName] = useState(currentUser?.fullName || '');
   const [studentStrand, setStudentStrand] = useState(currentUser?.strandOrDepartment || 'STEM 12-A');
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [contactEmail, setContactEmail] = useState(currentUser?.email || 'student.shs@cpu.edu.ph');
+  const [contactEmail, setContactEmail] = useState(currentUser?.email || '');
 
   React.useEffect(() => {
     if (currentUser) {
@@ -103,7 +102,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
   // Search and account filtering in student list
   const [searchQuery, setSearchQuery] = useState('');
-  const [accountFilter, setAccountFilter] = useState<string>('current');
 
   const handleAiPreCheck = async () => {
     if (!description.trim()) {
@@ -174,7 +172,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       setAiResult(null);
     } catch (err) {
       console.error('Submission failed:', err);
-      alert('Failed to submit complaint. Please try again.');
+      alert(err instanceof Error && err.message ? err.message : 'Failed to submit complaint. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -186,17 +184,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const activeStudentEmail = accountFilter === 'current'
-    ? (currentUser?.email || contactEmail).toLowerCase()
-    : accountFilter.toLowerCase();
-  const activeStudentName = currentUser?.fullName || studentName;
-
-  const myStudentComplaints = complaints.filter((c) => {
-    if (accountFilter === 'all') return true;
-    const emailMatch = Boolean(c.contactEmail && c.contactEmail.toLowerCase() === activeStudentEmail);
-    const nameMatch = Boolean(c.studentName && activeStudentName && c.studentName.toLowerCase() === activeStudentName.toLowerCase());
-    return emailMatch || nameMatch;
-  });
+  // The API only returns full records for complaints this account filed (anonymous reports are
+  // deliberately not linked to an account), so ownership is decided server-side.
+  const myStudentComplaints = complaints.filter((c) => Boolean(currentUser?.id) && c.ownerUid === currentUser?.id);
 
   const filteredComplaints = myStudentComplaints.filter(
     (c) =>
@@ -658,7 +648,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg font-black text-blue-950">Student Complaints Register</h3>
                 <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  {accountFilter === 'all' ? 'All Complaints Mode' : 'Personal Account'}
+                  Personal Account
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -667,25 +657,13 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-              {/* Account Filter Selector */}
+              {/* Signed-in account badge */}
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs">
                 <UserCheck className="w-4 h-4 text-blue-900 shrink-0" />
                 <span className="font-bold text-slate-600 shrink-0">Portal Account:</span>
-                <select
-                  value={accountFilter}
-                  onChange={(e) => setAccountFilter(e.target.value)}
-                  className="bg-transparent font-extrabold text-blue-950 focus:outline-none text-xs cursor-pointer max-w-[200px] truncate"
-                >
-                  <option value="current">
-                    {currentUser ? `${currentUser.fullName} (${currentUser.email})` : 'My Current Student Account'}
-                  </option>
-                  {PRESET_STUDENTS.map((s) => (
-                    <option key={s.id} value={s.email}>
-                      {s.fullName} ({s.strandOrDepartment})
-                    </option>
-                  ))}
-                  <option value="all">-- Show All Complaints (Admin View) --</option>
-                </select>
+                <span className="font-extrabold text-blue-950 max-w-[200px] truncate">
+                  {currentUser ? `${currentUser.fullName} (${currentUser.email})` : 'Not signed in'}
+                </span>
               </div>
 
               <div className="relative w-full sm:w-56">

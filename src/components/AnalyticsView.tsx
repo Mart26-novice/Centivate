@@ -54,9 +54,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       ['Pending Complaints', effectiveStats?.pendingCount || 0],
       ['In Progress Complaints', effectiveStats?.inProgressCount || 0],
       ['Resolved Complaints', effectiveStats?.resolvedCount || 0],
-      ['Avg Resolution Time (Hours)', effectiveStats?.avgResolutionTimeHours || 24],
-      ['System Usability Rating', effectiveStats?.avgSatisfactionScore || 4.7],
-      ['Total Survey Evaluators', effectiveStats?.surveyCount || 3],
+      ['Avg Resolution Time (Hours)', effectiveStats?.avgResolutionTimeHours || 'No data yet'],
+      ['System Usability Rating', effectiveStats?.surveyCount ? effectiveStats.avgSatisfactionScore : 'No responses yet'],
+      ['Total Survey Evaluators', effectiveStats?.surveyCount || 0],
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(',')).join('\n')].join('\n');
@@ -115,9 +115,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <span className="text-amber-400 font-extrabold text-xs uppercase tracking-wider block">
             System Usability Evaluation (SUS)
           </span>
-          <h3 className="text-xl font-black">Overall User Satisfaction Score: {effectiveStats?.avgSatisfactionScore || 4.7} / 5.0</h3>
+          <h3 className="text-xl font-black">
+            Overall User Satisfaction Score:{' '}
+            {effectiveStats?.surveyCount ? `${effectiveStats.avgSatisfactionScore} / 5.0` : 'No responses yet'}
+          </h3>
           <p className="text-xs text-blue-200">
-            Based on {effectiveStats?.surveyCount || 3} student, faculty, and technician evaluation responses.
+            {effectiveStats?.surveyCount
+              ? `Based on ${effectiveStats.surveyCount} student, faculty, and technician evaluation responses.`
+              : 'Scores appear here once evaluation surveys are submitted.'}
           </p>
         </div>
 
@@ -226,7 +231,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <span className="text-slate-500 font-bold block">Avg Resolution Turnaround</span>
             <span className="text-2xl font-black text-blue-900 mt-1 block">
-              {effectiveStats?.avgResolutionTimeHours || 24} Hours
+              {effectiveStats?.avgResolutionTimeHours ? `${effectiveStats.avgResolutionTimeHours} Hours` : 'No data yet'}
             </span>
             <span className="text-[10px] text-slate-400 mt-1 block">Time from Filing to Completion</span>
           </div>
@@ -242,7 +247,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <span className="text-slate-500 font-bold block">Evaluation Responses</span>
             <span className="text-2xl font-black text-amber-600 mt-1 block">
-              {effectiveStats?.surveyCount || 3} Evaluators
+              {effectiveStats?.surveyCount || 0} Evaluators
             </span>
             <span className="text-[10px] text-slate-400 mt-1 block">SUS Research Participants</span>
           </div>

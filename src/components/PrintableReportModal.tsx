@@ -138,7 +138,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
     </div>
     <div class="kpi-card">
       <div class="kpi-label">Usability Score</div>
-      <span class="kpi-value" style="color: #d97706;">${effectiveStats?.avgSatisfactionScore || 4.7} / 5.0</span>
+      <span class="kpi-value" style="color: #d97706;">${effectiveStats?.surveyCount ? effectiveStats.avgSatisfactionScore + ' / 5.0' : 'No responses yet'}</span>
     </div>
   </div>
 
@@ -323,7 +323,7 @@ export const PrintableReportModal: React.FC<PrintableReportModalProps> = ({
               </div>
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
                 <span className="text-[11px] font-bold text-slate-500 block uppercase">Usability Score</span>
-                <span className="text-xl font-black text-amber-600">{effectiveStats?.avgSatisfactionScore || 4.7} / 5.0</span>
+                <span className="text-xl font-black text-amber-600">{effectiveStats?.surveyCount ? `${effectiveStats.avgSatisfactionScore} / 5.0` : 'No responses yet'}</span>
               </div>
             </div>
           </div>
