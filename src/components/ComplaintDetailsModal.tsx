@@ -31,8 +31,14 @@ interface ComplaintDetailsModalProps {
   isAdminView?: boolean;
 }
 
-export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
-  isOpen,
+// Hooks must not sit behind an early return, so the modal only mounts its stateful body while open.
+export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = (props) => {
+  useEscapeKey(props.isOpen, props.onClose);
+  if (!props.isOpen || !props.complaint) return null;
+  return <ComplaintDetailsBody {...props} complaint={props.complaint} />;
+};
+
+const ComplaintDetailsBody: React.FC<ComplaintDetailsModalProps & { complaint: Complaint }> = ({
   onClose,
   complaint,
   staffList,
@@ -40,9 +46,6 @@ export const ComplaintDetailsModal: React.FC<ComplaintDetailsModalProps> = ({
   onArchiveComplaint,
   isAdminView = true,
 }) => {
-  useEscapeKey(isOpen, onClose);
-  if (!isOpen || !complaint) return null;
-
   const [status, setStatus] = useState<ComplaintStatus>(complaint.status);
   const [priority, setPriority] = useState<ComplaintPriority>(complaint.priority);
   const [assignedStaff, setAssignedStaff] = useState<string>(complaint.assignedStaff || '');
